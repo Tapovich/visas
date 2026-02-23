@@ -1,84 +1,63 @@
 // ============================================================
 //  UK VISA APPLICATION — app.js
+//  Rewritten from scratch: simple, synchronous, reliable.
 // ============================================================
 
-const SUPABASE_URL  = 'https://amjekzqtfsccshwwpibq.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtamVrenF0ZnNjY3Nod3dwaWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTYzODIsImV4cCI6MjA4NzQzMjM4Mn0.DfpBWyh0cWWHR5X5lovXLwynm5gbrFFfonteTZG5cl0';
-
-// ============================================================
-//  Supabase init
-// ============================================================
-const isConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON !== 'YOUR_SUPABASE_ANON_KEY';
-let supabase = null;
-
-// The CDN exposes the library as window.supabase (the whole module).
-// createClient lives at window.supabase.createClient
+// ── Optional cloud backup (Supabase) ─────────────────────────
+// Core functionality works without it. It is only used to backup
+// data silently in the background and never blocks the main UI.
+const SB_URL = 'https://amjekzqtfsccshwwpibq.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtamVrenF0ZnNjY3Nod3dwaWJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTYzODIsImV4cCI6MjA4NzQzMjM4Mn0.DfpBWyh0cWWHR5X5lovXLwynm5gbrFFfonteTZG5cl0';
+let sb = null;
 try {
-  const _lib = window.supabase; // the supabase-js module object
-  if (isConfigured && _lib && typeof _lib.createClient === 'function') {
-    supabase = _lib.createClient(SUPABASE_URL, SUPABASE_ANON);
-    console.log('✅ Supabase client initialized');
-  } else if (!isConfigured) {
-    const w = document.getElementById('configWarning');
-    if (w) w.style.display = 'block';
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
   }
-} catch (e) {
-  console.error('Supabase init failed:', e);
-}
+} catch (e) { console.warn('Supabase init failed:', e); }
 
-// ============================================================
-//  App ID
-// ============================================================
-function generateUUID() {
+// ── App ID ───────────────────────────────────────────────────
+function makeUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
 }
-
-let appId = localStorage.getItem('visa_app_id') || generateUUID();
+const appId = localStorage.getItem('visa_app_id') || makeUUID();
 localStorage.setItem('visa_app_id', appId);
-document.getElementById('appIdDisplay').textContent = appId;
+const appIdDisplay = document.getElementById('appIdDisplay');
+if (appIdDisplay) appIdDisplay.textContent = appId;
 
-// ============================================================
-//  Accordion sections — all visible, click header to collapse
-// ============================================================
-document.querySelectorAll('.section-header').forEach(header => {
-  header.addEventListener('click', () => {
-    const sec = header.closest('.form-section');
-    const body = sec.querySelector('.section-body');
-    const chevron = header.querySelector('.chevron');
-    // Use dataset to track open/closed state reliably
-    const isOpen = sec.dataset.collapsed !== 'true';
-    sec.dataset.collapsed = isOpen ? 'true' : 'false';
-    body.style.display = isOpen ? 'none' : 'block';
-    chevron.textContent = isOpen ? '▶' : '▼';
+// ── Accordion ────────────────────────────────────────────────
+document.querySelectorAll('.section-header').forEach(hdr => {
+  hdr.addEventListener('click', () => {
+    const section = hdr.closest('.form-section');
+    const body    = section && section.querySelector('.section-body');
+    const chevron = hdr.querySelector('.chevron');
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : '';   // '' = fallback to CSS (display:block)
+    if (chevron) chevron.textContent = isOpen ? '▶' : '▼';
   });
 });
 
-// Quick-jump buttons scroll to section and open it
+// ── Tab navigation ───────────────────────────────────────────
 document.querySelectorAll('.tab-jump').forEach(btn => {
   btn.addEventListener('click', () => {
     const target = document.getElementById(btn.dataset.target);
     if (!target) return;
-
-    // Open section if collapsed
-    if (target.dataset.collapsed === 'true') {
-      const body = target.querySelector('.section-body');
-      const chevron = target.querySelector('.chevron');
-      target.dataset.collapsed = 'false';
-      if (body) body.style.display = 'block';
+    // Expand the section if it was collapsed
+    const body    = target.querySelector('.section-body');
+    const chevron = target.querySelector('.chevron');
+    if (body && body.style.display === 'none') {
+      body.style.display = '';
       if (chevron) chevron.textContent = '▼';
     }
-
-    // scroll-margin-top in CSS already offsets the sticky header
+    // scroll-margin-top in CSS already accounts for the sticky header
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 });
 
-// ============================================================
-//  Auto CAPS on input for .uppercase fields
-// ============================================================
+// ── Auto-CAPS ────────────────────────────────────────────────
 document.addEventListener('input', e => {
   if (e.target.classList.contains('uppercase')) {
     const pos = e.target.selectionStart;
@@ -87,252 +66,59 @@ document.addEventListener('input', e => {
   }
 });
 
-// ============================================================
-//  Conditional toggles
-// ============================================================
-function setupToggle(radioName, targetId, showValue) {
-  const radios = document.querySelectorAll(`input[name="${radioName}"]`);
-  const target = document.getElementById(targetId);
-  if (!target) return;
-  function update() {
+// ── Conditional radio-driven blocks ──────────────────────────
+function setupToggle(radioName, blockId, showValue) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+  function refresh() {
     const checked = document.querySelector(`input[name="${radioName}"]:checked`);
-    target.style.display = (checked && checked.value === showValue) ? 'block' : 'none';
+    block.style.display = (checked && checked.value === showValue) ? 'block' : 'none';
   }
-  radios.forEach(r => r.addEventListener('change', update));
-  update();
+  document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => r.addEventListener('change', refresh));
+  refresh();
 }
-
-// Passport
-setupToggle('other_passports_yn',      'otherPassportsDetails',       'Yes');
+setupToggle('other_passports_yn',       'otherPassportsDetails',      'Yes');
 setupToggle('prev_country_passport_yn', 'prevCountryPassportDetails', 'Yes');
-// Contact
-setupToggle('prev_addresses_yn',   'prevAddressesBlock', 'Yes');
-setupToggle('corr_address_yn',     'corrAddressBlock',   'Yes');
-// Family
-setupToggle('children_yn', 'childrenBlock', 'Yes');
-// Finance
-setupToggle('property_yn',    'propertyBlock',    'Yes');
-setupToggle('other_income_yn','otherIncomeBlock',  'Yes');
-// Travel
-setupToggle('ticket_booked_yn',       'ticketBlock',             'Yes');
-setupToggle('accommodation_booked_yn','accommodationBookedBlock', 'Yes');
-// UK connections
-setupToggle('uk_family_yn',  'ukFamilyBlock',   'Yes');
-setupToggle('uk_friends_yn', 'ukFriendsBlock',  'Yes');
-setupToggle('uk_sponsor_yn', 'ukSponsorBlock',  'Yes');
-// Travel history
-setupToggle('prev_uk_visit_yn','prevUkVisitBlock', 'Yes');
-setupToggle('other_visas_yn', 'otherVisasBlock',  'Yes');
+setupToggle('prev_addresses_yn',        'prevAddressesBlock',         'Yes');
+setupToggle('corr_address_yn',          'corrAddressBlock',           'Yes');
+setupToggle('children_yn',              'childrenBlock',              'Yes');
+setupToggle('property_yn',              'propertyBlock',              'Yes');
+setupToggle('other_income_yn',          'otherIncomeBlock',           'Yes');
+setupToggle('ticket_booked_yn',         'ticketBlock',                'Yes');
+setupToggle('accommodation_booked_yn',  'accommodationBookedBlock',   'Yes');
+setupToggle('uk_family_yn',             'ukFamilyBlock',              'Yes');
+setupToggle('uk_friends_yn',            'ukFriendsBlock',             'Yes');
+setupToggle('uk_sponsor_yn',            'ukSponsorBlock',             'Yes');
+setupToggle('prev_uk_visit_yn',         'prevUkVisitBlock',           'Yes');
+setupToggle('other_visas_yn',           'otherVisasBlock',            'Yes');
 
-// Spouse block — depends on marital_status select
+// Spouse block
 const maritalSel  = document.getElementById('marital_status');
 const spouseBlock = document.getElementById('spouseBlock');
-function updateSpouse() {
-  const v = maritalSel ? maritalSel.value : '';
+function refreshSpouse() {
+  if (!maritalSel || !spouseBlock) return;
+  const v = maritalSel.value;
   spouseBlock.style.display = (v === 'Married' || v === 'Civil partnership') ? 'block' : 'none';
 }
-if (maritalSel) maritalSel.addEventListener('change', updateSpouse);
+if (maritalSel) maritalSel.addEventListener('change', refreshSpouse);
 
-// Employment blocks
-const empStatusSel = document.getElementById('employment_status');
-const empMap = {
-  'Employed':      'employedBlock',
-  'Self-employed': 'selfEmployedBlock',
-  'Retired':       'retiredBlock',
-  'Student':       'studentBlock',
-};
-function updateEmpBlocks() {
-  Object.values(empMap).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  const blockId = empMap[empStatusSel ? empStatusSel.value : ''];
-  if (blockId) {
-    const el = document.getElementById(blockId);
+// Employment detail blocks
+const empSel = document.getElementById('employment_status');
+const empMap = { Employed: 'employedBlock', 'Self-employed': 'selfEmployedBlock', Retired: 'retiredBlock', Student: 'studentBlock' };
+function refreshEmp() {
+  Object.values(empMap).forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  if (empSel && empMap[empSel.value]) {
+    const el = document.getElementById(empMap[empSel.value]);
     if (el) el.style.display = 'block';
   }
 }
-if (empStatusSel) empStatusSel.addEventListener('change', updateEmpBlocks);
+if (empSel) empSel.addEventListener('change', refreshEmp);
 
-// ============================================================
-//  Dynamic children
-// ============================================================
-let childCount = 0;
-const childrenList  = document.getElementById('childrenList');
-const addChildBtn   = document.getElementById('addChildBtn');
-const childTemplate = document.getElementById('childTemplate');
+// ── Photo upload helpers ──────────────────────────────────────
+const photoUrls = {};  // fieldName → data URL (in-memory only, not persisted)
 
-if (addChildBtn) addChildBtn.addEventListener('click', () => addChild());
-
-function addChild(data = {}) {
-  childCount++;
-  const clone = childTemplate.content.cloneNode(true);
-  const entry = clone.querySelector('.child-entry');
-  entry.dataset.childIdx = childCount;
-  clone.querySelector('.child-num').textContent = childCount;
-
-  const photoInput = clone.querySelector('.child-photo-input');
-  const photoLabel = clone.querySelector('.photo-label');
-  const photoId = `photo_child_${childCount}_passport`;
-  photoInput.id   = photoId;
-  photoInput.name = photoId;
-  if (photoLabel) photoLabel.setAttribute('for', photoId);
-
-  if (data.name)        clone.querySelector('[name="child_name"]').value        = data.name;
-  if (data.dob)         clone.querySelector('[name="child_dob"]').value          = data.dob;
-  if (data.nationality) clone.querySelector('[name="child_nationality"]').value  = data.nationality;
-  if (data.location)    clone.querySelector('[name="child_location"]').value     = data.location;
-
-  clone.querySelector('.remove-child-btn').addEventListener('click', function () {
-    this.closest('.child-entry').remove();
-    renumberChildren();
-  });
-
-  photoInput.addEventListener('change', function () {
-    const preview = this.closest('.photo-upload-area').querySelector('.child-photo-preview');
-    handlePhotoPreview(this, preview, `child_${entry.dataset.childIdx}_passport`);
-  });
-
-  childrenList.appendChild(clone);
-}
-
-function renumberChildren() {
-  childrenList.querySelectorAll('.child-entry').forEach((e, i) => {
-    e.querySelector('.child-num').textContent = i + 1;
-    e.dataset.childIdx = i + 1;
-  });
-  childCount = childrenList.querySelectorAll('.child-entry').length;
-}
-
-// ============================================================
-//  Photo uploads
-// ============================================================
-const photoUrls = {};
-
-function setupPhotoInput(inputId, previewId, fieldName) {
-  const input   = document.getElementById(inputId);
-  const preview = document.getElementById(previewId);
-  if (!input || !preview) return;
-  input.addEventListener('change', () => handlePhotoPreview(input, preview, fieldName));
-}
-
-function handlePhotoPreview(input, preview, fieldName) {
-  const file = input.files[0];
-  if (!file) return;
-  preview.innerHTML = '';
-
-  // Show file name immediately so user sees feedback before FileReader finishes
-  const loadingSpan = document.createElement('span');
-  loadingSpan.className = 'pdf-icon';
-  loadingSpan.textContent = '⏳ ' + file.name;
-  preview.appendChild(loadingSpan);
-
-  // Try to show image preview; fallback to file icon for PDF/HEIC/unsupported
-  const reader = new FileReader();
-  reader.onload = e => {
-    preview.innerHTML = '';
-    const dataUrl = e.target.result;
-
-    // Store data URL and autosave
-    photoUrls[fieldName] = dataUrl;
-    debouncedSave();
-
-    // Try rendering as image; if it fails (e.g. HEIC), show file icon
-    if (file.type.startsWith('image/') && !file.type.includes('heic') && !file.type.includes('heif')) {
-      const img = document.createElement('img');
-      img.alt = fieldName;
-      img.onerror = () => {
-        // Can't render — show file icon instead
-        preview.innerHTML = '';
-        const span = document.createElement('span');
-        span.className = 'pdf-icon';
-        span.textContent = '📄 ' + file.name;
-        preview.appendChild(span);
-        preview.appendChild(makeRemoveBtn(input, preview, fieldName));
-      };
-      img.src = dataUrl;
-      preview.appendChild(img);
-      preview.appendChild(makeRemoveBtn(input, preview, fieldName));
-    } else {
-      // PDF, HEIC, or other non-renderable format
-      const span = document.createElement('span');
-      span.className = 'pdf-icon';
-      span.textContent = '📄 ' + file.name;
-      preview.appendChild(span);
-      preview.appendChild(makeRemoveBtn(input, preview, fieldName));
-    }
-
-    // Also upload to Supabase Storage if available (replaces data URL with CDN URL)
-    if (supabase) {
-      uploadPhoto(file, fieldName);
-    }
-  };
-  reader.onerror = () => {
-    preview.innerHTML = '';
-    const span = document.createElement('span');
-    span.className = 'pdf-icon';
-    span.textContent = '❌ Ошибка чтения файла / File read error';
-    preview.appendChild(span);
-  };
-  reader.readAsDataURL(file);
-}
-
-function makeRemoveBtn(input, preview, fieldName) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'remove-photo';
-  btn.textContent = '✕ Удалить / Remove';
-  btn.addEventListener('click', () => {
-    input.value = '';
-    preview.innerHTML = '';
-    delete photoUrls[fieldName];
-  });
-  return btn;
-}
-
-async function uploadPhoto(file, fieldName) {
-  if (!supabase) return;
-  setSaveStatus('Загрузка фото...', 'saving');
-  try {
-    const ext  = file.name.split('.').pop();
-    const path = `${appId}/${fieldName}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('passport-photos').upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('passport-photos').getPublicUrl(path);
-    photoUrls[fieldName] = urlData.publicUrl;
-    setSaveStatus('Фото загружено ✓', 'saved');
-  } catch (err) {
-    console.error('Photo upload error:', err);
-    setSaveStatus('Ошибка загрузки фото', 'error');
-  }
-}
-
-setupPhotoInput('photo_own_passport',    'preview_own_passport',    'own_passport');
-setupPhotoInput('photo_father_passport', 'preview_father_passport', 'father_passport');
-setupPhotoInput('photo_mother_passport', 'preview_mother_passport', 'mother_passport');
-setupPhotoInput('photo_spouse_passport', 'preview_spouse_passport', 'spouse_passport');
-
-// Drag-and-drop
-document.querySelectorAll('.photo-upload-area').forEach(area => {
-  area.addEventListener('dragover',  e => { e.preventDefault(); area.classList.add('dragover'); });
-  area.addEventListener('dragleave', ()  => area.classList.remove('dragover'));
-  area.addEventListener('drop', e => {
-    e.preventDefault();
-    area.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const input = area.querySelector('.file-input');
-    if (!input) return;
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change'));
-  });
-});
-
-// Explicitly wire photo-label clicks to their file inputs.
-// Safari/WebKit can silently ignore the HTML for="..." association
-// when the input is positioned off-screen, so we handle it in JS too.
+// ALL photo labels: programmatically click the hidden file input.
+// This is the most reliable cross-browser approach.
 document.querySelectorAll('.photo-label[for]').forEach(label => {
   label.addEventListener('click', e => {
     e.preventDefault();
@@ -341,111 +127,89 @@ document.querySelectorAll('.photo-label[for]').forEach(label => {
   });
 });
 
-// ============================================================
-//  Collect / populate form data
-// ============================================================
-function collectFormData() {
-  const data = {};
-
-  // Text / select / textarea (skip file + radio)
-  document.querySelectorAll(
-    '#visaForm input:not([type="file"]):not([type="radio"]), #visaForm select, #visaForm textarea'
-  ).forEach(el => {
-    if (el.name) data[el.name] = el.value;
+// Drag-and-drop
+document.querySelectorAll('.photo-upload-area').forEach(area => {
+  area.addEventListener('dragover',  e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', ()  => area.classList.remove('dragover'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    const input = area.querySelector('.file-input');
+    if (!input || !e.dataTransfer.files[0]) return;
+    const dt = new DataTransfer();
+    dt.items.add(e.dataTransfer.files[0]);
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
   });
+});
 
-  // Radios
-  const radioNames = new Set();
-  document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => radioNames.add(r.name));
-  radioNames.forEach(name => {
-    const checked = document.querySelector(`input[name="${name}"]:checked`);
-    data[name] = checked ? checked.value : '';
-  });
+function handlePhotoFile(input, preview, fieldName) {
+  const file = input.files[0];
+  if (!file || !preview) return;
 
-  // Children
-  const children = [];
-  document.querySelectorAll('#childrenList .child-entry').forEach((entry, idx) => {
-    children.push({
-      name:        entry.querySelector('[name="child_name"]')?.value        || '',
-      dob:         entry.querySelector('[name="child_dob"]')?.value          || '',
-      nationality: entry.querySelector('[name="child_nationality"]')?.value  || '',
-      location:    entry.querySelector('[name="child_location"]')?.value     || '',
-      photo_url:   photoUrls[`child_${idx + 1}_passport`] || '',
-    });
-  });
-  data.children = children;
-
-  // Photo URLs
-  data.photo_own_passport_url    = photoUrls['own_passport']    || '';
-  data.photo_father_passport_url = photoUrls['father_passport'] || '';
-  data.photo_mother_passport_url = photoUrls['mother_passport'] || '';
-  data.photo_spouse_passport_url = photoUrls['spouse_passport'] || '';
-
-  return data;
-}
-
-function populateForm(data) {
-  if (!data) return;
-  isPopulating = true;
-
-  try {
-    // Text / select / textarea
-    Object.entries(data).forEach(([name, value]) => {
-      if (typeof value !== 'string') return;
-      const el = document.querySelector(`#visaForm [name="${name}"]`);
-      if (el && el.type !== 'radio' && el.type !== 'file') {
-        el.value = value;
-      }
-    });
-
-    // Radios
-    const radioNames = new Set();
-    document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => radioNames.add(r.name));
-    radioNames.forEach(name => {
-      if (!data[name]) return;
-      const radio = document.querySelector(`input[name="${name}"][value="${data[name]}"]`);
-      if (radio) {
-        radio.checked = true;
-        radio.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
-    // Re-trigger selects for conditional blocks
-    if (empStatusSel) empStatusSel.dispatchEvent(new Event('change'));
-    updateSpouse();
-
-    // Children
-    if (Array.isArray(data.children) && data.children.length > 0) {
-      childrenList.innerHTML = '';
-      childCount = 0;
-      data.children.forEach(c => addChild(c));
-      const yn = document.querySelector('input[name="children_yn"][value="Yes"]');
-      if (yn) { yn.checked = true; document.getElementById('childrenBlock').style.display = 'block'; }
-    }
-
-    // Photos
-    [
-      { key: 'photo_own_passport_url',    previewId: 'preview_own_passport',    field: 'own_passport' },
-      { key: 'photo_father_passport_url', previewId: 'preview_father_passport', field: 'father_passport' },
-      { key: 'photo_mother_passport_url', previewId: 'preview_mother_passport', field: 'mother_passport' },
-      { key: 'photo_spouse_passport_url', previewId: 'preview_spouse_passport', field: 'spouse_passport' },
-    ].forEach(({ key, previewId, field }) => {
-      const url = data[key];
-      if (!url) return;
-      photoUrls[field] = url;
-      const preview = document.getElementById(previewId);
-      if (preview) showSavedPhoto(preview, url, field);
-    });
-  } finally {
-    isPopulating = false;
-  }
-}
-
-function showSavedPhoto(preview, url, fieldName) {
+  // Immediate visual feedback
   preview.innerHTML = '';
-  if (/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url) || url.startsWith('data:image')) {
+  const loading = document.createElement('span');
+  loading.className = 'pdf-icon';
+  loading.textContent = '⏳ ' + file.name;
+  preview.appendChild(loading);
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const url = ev.target.result;
+    if (fieldName) photoUrls[fieldName] = url;
+
+    preview.innerHTML = '';
+
+    if (file.type.startsWith('image/') && !file.type.includes('heic') && !file.type.includes('heif')) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = file.name;
+      img.onerror = () => {
+        preview.innerHTML = '';
+        addFileIcon(preview, file.name);
+        addRemoveBtn(preview, input, fieldName);
+      };
+      preview.appendChild(img);
+    } else {
+      addFileIcon(preview, file.name);
+    }
+    addRemoveBtn(preview, input, fieldName);
+  };
+  reader.onerror = () => {
+    preview.innerHTML = '<span class="pdf-icon">❌ Ошибка чтения файла</span>';
+  };
+  reader.readAsDataURL(file);
+}
+
+function addFileIcon(preview, name) {
+  const span = document.createElement('span');
+  span.className = 'pdf-icon';
+  span.textContent = '📄 ' + name;
+  preview.appendChild(span);
+}
+
+function addRemoveBtn(preview, input, fieldName) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'remove-photo';
+  btn.textContent = '✕ Удалить / Remove';
+  btn.addEventListener('click', () => {
+    input.value = '';
+    preview.innerHTML = '';
+    if (fieldName) delete photoUrls[fieldName];
+  });
+  preview.appendChild(btn);
+}
+
+function showStoredPhoto(preview, url, fieldName) {
+  if (!preview || !url) return;
+  photoUrls[fieldName] = url;
+  preview.innerHTML = '';
+  if (url.startsWith('data:image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) {
     const img = document.createElement('img');
-    img.src = url; img.alt = fieldName;
+    img.src = url;
+    img.alt = fieldName;
     preview.appendChild(img);
   } else {
     const span = document.createElement('span');
@@ -454,32 +218,197 @@ function showSavedPhoto(preview, url, fieldName) {
     preview.appendChild(span);
   }
   const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'remove-photo';
+  btn.type = 'button';
+  btn.className = 'remove-photo';
   btn.textContent = '✕ Удалить / Remove';
   btn.addEventListener('click', () => { preview.innerHTML = ''; delete photoUrls[fieldName]; });
   preview.appendChild(btn);
 }
 
-// ============================================================
-//  Progress bar
-// ============================================================
+// Wire up static (non-child) photo inputs
+[
+  ['photo_own_passport',    'preview_own_passport',    'own_passport'],
+  ['photo_father_passport', 'preview_father_passport', 'father_passport'],
+  ['photo_mother_passport', 'preview_mother_passport', 'mother_passport'],
+  ['photo_spouse_passport', 'preview_spouse_passport', 'spouse_passport'],
+].forEach(([inputId, previewId, field]) => {
+  const input   = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (input && preview) {
+    input.addEventListener('change', () => handlePhotoFile(input, preview, field));
+  }
+});
+
+// ── Dynamic children ─────────────────────────────────────────
+let childCount = 0;
+const childrenList  = document.getElementById('childrenList');
+const childTemplate = document.getElementById('childTemplate');
+
+const addChildBtn = document.getElementById('addChildBtn');
+if (addChildBtn) addChildBtn.addEventListener('click', () => addChild());
+
+function addChild(data) {
+  if (!childTemplate || !childrenList) return;
+  data = data || {};
+  childCount++;
+  const clone   = childTemplate.content.cloneNode(true);
+  const entry   = clone.querySelector('.child-entry');
+  const numSpan = clone.querySelector('.child-num');
+  if (entry)   entry.dataset.childIdx = childCount;
+  if (numSpan) numSpan.textContent    = childCount;
+
+  // Give the photo input a unique id so its label works
+  const fileInput  = clone.querySelector('.child-photo-input');
+  const photoLabel = clone.querySelector('.photo-label');
+  const photoId    = 'child_photo_' + childCount;
+  if (fileInput) { fileInput.id = photoId; fileInput.name = photoId; }
+  if (photoLabel) photoLabel.setAttribute('for', photoId);
+
+  // Populate saved data
+  ['child_name', 'child_dob', 'child_nationality', 'child_location'].forEach(n => {
+    const key = n.replace('child_', '');
+    const el  = clone.querySelector(`[name="${n}"]`);
+    if (el && data[key]) el.value = data[key];
+  });
+
+  // Remove button
+  const removeBtn = clone.querySelector('.remove-child-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function () {
+      this.closest('.child-entry').remove();
+      renumberChildren();
+    });
+  }
+
+  // Photo for this child
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      const prev = this.closest('.photo-upload-area').querySelector('.child-photo-preview');
+      handlePhotoFile(this, prev, null);
+    });
+  }
+  if (photoLabel) {
+    photoLabel.addEventListener('click', e => {
+      e.preventDefault();
+      const id = photoLabel.getAttribute('for');
+      const inp = id ? document.getElementById(id) : null;
+      if (inp) inp.click();
+    });
+  }
+
+  childrenList.appendChild(clone);
+}
+
+function renumberChildren() {
+  if (!childrenList) return;
+  childrenList.querySelectorAll('.child-entry').forEach((el, i) => {
+    const numSpan = el.querySelector('.child-num');
+    if (numSpan) numSpan.textContent = i + 1;
+    el.dataset.childIdx = i + 1;
+  });
+  childCount = childrenList.querySelectorAll('.child-entry').length;
+}
+
+// ── Collect form data ─────────────────────────────────────────
+function collectFormData() {
+  const d = {};
+
+  // Text, date, email, tel, number, select, textarea
+  document.querySelectorAll(
+    '#visaForm input:not([type="file"]):not([type="radio"]), #visaForm select, #visaForm textarea'
+  ).forEach(el => { if (el.name) d[el.name] = el.value; });
+
+  // Radios — collect all names first, then get checked value
+  const radioNames = new Set();
+  document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => radioNames.add(r.name));
+  radioNames.forEach(name => {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    d[name] = checked ? checked.value : '';
+  });
+
+  // Children
+  d.children = [];
+  if (childrenList) {
+    childrenList.querySelectorAll('.child-entry').forEach(el => {
+      d.children.push({
+        name:        el.querySelector('[name="child_name"]')?.value        || '',
+        dob:         el.querySelector('[name="child_dob"]')?.value          || '',
+        nationality: el.querySelector('[name="child_nationality"]')?.value  || '',
+        location:    el.querySelector('[name="child_location"]')?.value     || '',
+      });
+    });
+  }
+
+  return d;
+}
+
+// ── Populate form from saved data ─────────────────────────────
+let isPopulating = false;
+
+function populateForm(d) {
+  if (!d) return;
+  isPopulating = true;
+  try {
+    // Text/select/textarea
+    Object.entries(d).forEach(([name, value]) => {
+      if (typeof value !== 'string') return;
+      const el = document.querySelector(`#visaForm [name="${name}"]`);
+      if (el && el.type !== 'radio' && el.type !== 'file') el.value = value;
+    });
+
+    // Radios
+    const seen = new Set();
+    document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => {
+      if (seen.has(r.name)) return;
+      if (!d[r.name]) return;
+      const match = document.querySelector(`input[name="${r.name}"][value="${d[r.name]}"]`);
+      if (match) {
+        match.checked = true;
+        match.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      seen.add(r.name);
+    });
+
+    // Re-trigger selects so conditional blocks show correctly
+    if (empSel) empSel.dispatchEvent(new Event('change'));
+    refreshSpouse();
+
+    // Children
+    if (Array.isArray(d.children) && d.children.length > 0) {
+      if (childrenList) childrenList.innerHTML = '';
+      childCount = 0;
+      d.children.forEach(c => addChild(c));
+      const yn = document.querySelector('input[name="children_yn"][value="Yes"]');
+      if (yn) { yn.checked = true; }
+      const block = document.getElementById('childrenBlock');
+      if (block) block.style.display = 'block';
+    }
+  } finally {
+    isPopulating = false;
+  }
+}
+
+// ── Progress bar ──────────────────────────────────────────────
 const REQUIRED = [
-  'full_name','dob','place_of_birth','nationality','gender','marital_status',
-  'passport_number','passport_issue_date','passport_expiry_date','passport_place_of_issue',
-  'home_address','address_duration','mobile_phone','email',
-  'father_name','father_dob','mother_name','mother_dob',
-  'occupation','employment_status','trip_payer','savings',
-  'arrival_date','departure_date','stay_duration','visit_purpose','accommodation',
+  'full_name', 'dob', 'place_of_birth', 'nationality', 'gender', 'marital_status',
+  'passport_number', 'passport_issue_date', 'passport_expiry_date', 'passport_place_of_issue',
+  'home_address', 'address_duration', 'mobile_phone', 'email',
+  'father_name', 'father_dob', 'mother_name', 'mother_dob',
+  'occupation', 'employment_status', 'trip_payer', 'savings',
+  'arrival_date', 'departure_date', 'stay_duration', 'visit_purpose', 'accommodation',
 ];
 
-function updateProgress() {
-  const data = collectFormData();
-  const filled = REQUIRED.filter(f => data[f] && String(data[f]).trim()).length;
-  const pct = Math.round((filled / REQUIRED.length) * 100);
-  document.getElementById('progressBar').style.width  = pct + '%';
-  document.getElementById('progressLabel').textContent = `${pct}% заполнено / completed`;
+function refreshProgress() {
+  const d      = collectFormData();
+  const filled = REQUIRED.filter(k => d[k] && String(d[k]).trim()).length;
+  const pct    = Math.round(filled / REQUIRED.length * 100);
 
-  // Mark tab-jump buttons
+  const bar   = document.getElementById('progressBar');
+  const label = document.getElementById('progressLabel');
+  if (bar)   bar.style.width      = pct + '%';
+  if (label) label.textContent    = pct + '% заполнено / completed';
+
+  // Colour completed nav tabs
   const sectionReqs = [
     ['full_name','dob','place_of_birth','nationality','gender','marital_status'],
     ['passport_number','passport_issue_date','passport_expiry_date','passport_place_of_issue'],
@@ -489,286 +418,159 @@ function updateProgress() {
     ['arrival_date','departure_date','stay_duration','visit_purpose','accommodation'],
     [],
   ];
-  document.querySelectorAll('.tab-jump').forEach((btn, idx) => {
-    const reqs = sectionReqs[idx] || [];
-    const done = reqs.length > 0 && reqs.every(f => data[f] && String(data[f]).trim());
-    btn.classList.toggle('done', done);
+  document.querySelectorAll('.tab-jump').forEach((btn, i) => {
+    const reqs = sectionReqs[i] || [];
+    btn.classList.toggle('done', reqs.length > 0 && reqs.every(k => d[k] && String(d[k]).trim()));
   });
 
-  // Show/hide submit buttons only when 100% filled
-  const allFilled = pct === 100;
-  const btnSubmit        = document.getElementById('btnSubmit');
-  const finalSubmitWrap  = document.getElementById('finalSubmitWrap');
-  if (btnSubmit)       btnSubmit.style.display       = allFilled ? 'inline-flex' : 'none';
-  if (finalSubmitWrap) finalSubmitWrap.style.display  = allFilled ? 'block'      : 'none';
+  // Show submit button only when all required fields are filled
+  const allDone = pct === 100;
+  const btnTop = document.getElementById('btnSubmit');
+  const btnBot = document.getElementById('finalSubmitWrap');
+  if (btnTop) btnTop.style.display = allDone ? 'inline-flex' : 'none';
+  if (btnBot) btnBot.style.display = allDone ? 'block'      : 'none';
 }
 
-// ============================================================
-//  Save / Load
-// ============================================================
-let saveTimer = null;
-let isPopulating = false; // prevents saving while loadDraft populates the form
-
-function setSaveStatus(msg, state) {
+// ── Save status ───────────────────────────────────────────────
+function setStatus(msg, cls) {
   const el = document.getElementById('saveStatus');
   if (!el) return;
   el.textContent = msg;
-  el.className = 'save-status-inline ' + (state || '');
+  el.className   = 'save-status-inline' + (cls ? ' ' + cls : '');
 }
 
-// Strip base64 data URLs before persisting to localStorage.
-// Base64-encoded images can easily exceed the 5 MB localStorage quota,
-// causing setItem() to throw and losing ALL saved text data silently.
-function stripDataUrlsForStorage(formData) {
-  const copy = { ...formData };
-  const photoKeys = [
-    'photo_own_passport_url',
-    'photo_father_passport_url',
-    'photo_mother_passport_url',
-    'photo_spouse_passport_url',
-  ];
-  photoKeys.forEach(k => {
-    if (copy[k] && copy[k].startsWith('data:')) copy[k] = '';
-  });
-  if (Array.isArray(copy.children)) {
-    copy.children = copy.children.map(c => ({
-      ...c,
-      photo_url: (c.photo_url && c.photo_url.startsWith('data:')) ? '' : c.photo_url,
-    }));
-  }
-  return copy;
+// ── Persist to localStorage ───────────────────────────────────
+// We never store base64 photo data — they can easily exceed the 5 MB
+// localStorage quota and silently kill all saves.
+function hasContent(d) {
+  if (!d) return false;
+  return Object.values(d).some(v =>
+    Array.isArray(v) ? v.length > 0 : (typeof v === 'string' && v.trim().length > 0)
+  );
 }
 
-// Returns true if formData contains at least one non-empty field.
-// Used to prevent an empty form from overwriting real saved data
-// (e.g. beforeunload firing before async loadDraft has populated the form).
-function hasFormContent(formData) {
-  if (!formData) return false;
-  return Object.values(formData).some(v => {
-    if (typeof v === 'string') return v.trim().length > 0;
-    if (Array.isArray(v))      return v.length > 0;
-    return false;
-  });
-}
-
-// Save to localStorage instantly (no debounce) so data never gets lost
-function saveToLocalStorage(submitFlag) {
+function saveNow() {
+  if (isPopulating) return;  // never save while populating from storage
   try {
-    const formData = stripDataUrlsForStorage(collectFormData());
-    // Never overwrite existing saved data with a completely empty form.
-    // This protects against beforeunload firing while the page is still
-    // initialising (loadDraft async hasn't populated the form yet).
-    if (!hasFormContent(formData)) {
-      const existing = localStorage.getItem('visa_draft_' + appId);
-      if (!existing) {
-        console.log('💾 Skipping — form is empty and no prior save exists');
-        return;
-      }
-    }
-    localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag || false }));
-    console.log('💾 Saved to localStorage');
-    // Show instant feedback — user shouldn't have to wait for the cloud save
-    setSaveStatus('Сохранено ✓', 'saved');
-    updateProgress();
+    const d = collectFormData();
+    // Don't create a new empty localStorage entry (e.g. beforeunload on a blank page)
+    const existing = localStorage.getItem('visa_draft_' + appId);
+    if (!hasContent(d) && !existing) return;
+    localStorage.setItem('visa_draft_' + appId, JSON.stringify(d));
+    setStatus('Сохранено ✓', 'saved');
+    refreshProgress();
   } catch (e) {
-    console.error('localStorage save failed:', e);
-    setSaveStatus('Ошибка сохранения / Save error', 'error');
+    console.error('Save failed:', e);
+    setStatus('Ошибка сохранения', 'error');
   }
 }
 
-function debouncedSave() {
-  if (isPopulating) return; // don't save while loading/populating form
-  // Instantly save to localStorage so data persists even if page closes
-  saveToLocalStorage(false);
-  // Debounce only the Supabase cloud save
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveDraftToCloud(false), 1200);
+// Debounced cloud backup (fire-and-forget, never blocks UI)
+let cloudTimer = null;
+function scheduleCloudSync() {
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(async () => {
+    if (!sb) return;
+    try {
+      const d = collectFormData();
+      await sb.from('visa_applications').upsert({
+        id: appId, data: d, updated_at: new Date().toISOString(),
+      });
+    } catch (e) { console.warn('Cloud sync failed:', e); }
+  }, 2000);
 }
 
-async function saveDraft(submitFlag = false) {
-  saveToLocalStorage(submitFlag);
-  await saveDraftToCloud(submitFlag);
-}
+// ── Auto-save on any input/change ─────────────────────────────
+document.getElementById('visaForm').addEventListener('input',  () => { saveNow(); scheduleCloudSync(); });
+document.getElementById('visaForm').addEventListener('change', () => { saveNow(); scheduleCloudSync(); });
+// Final save when page closes
+window.addEventListener('beforeunload', () => { if (!isPopulating) saveNow(); });
 
-async function saveDraftToCloud(submitFlag = false) {
-  if (!supabase) {
-    setSaveStatus('Сохранено ✓', 'saved');
-    updateProgress();
-    return;
-  }
-
-  const formData = collectFormData();
-  setSaveStatus('Сохранение... / Saving...', 'saving');
-
-  try {
-    // Use upsert for simplicity — single call instead of select+insert/update
-    const { error } = await supabase.from('visa_applications').upsert({
-      id: appId,
-      data: formData,
-      submitted: submitFlag,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error('Supabase upsert error:', error);
-      setSaveStatus('Ошибка облака / Cloud error', 'error');
-    } else {
-      console.log('☁️ Saved to Supabase');
-      setSaveStatus('Сохранено ✓ / Saved', 'saved');
-    }
-    updateProgress();
-  } catch (err) {
-    console.error('Save error:', err);
-    setSaveStatus('Ошибка сохранения / Save error', 'error');
-  }
-}
-
-// Save on page close / navigation so nothing is lost
-window.addEventListener('beforeunload', () => {
-  saveToLocalStorage(false);
-});
-
-async function loadDraft() {
-  console.log('🔄 Loading draft for appId:', appId);
-
-  // 1. localStorage FIRST — synchronous, instant, always reflects the latest
-  //    state saved on this device. Checking Supabase first was the root cause
-  //    of data loss: the async Supabase await left a window where beforeunload
-  //    could fire and overwrite localStorage with an empty form.
+// ── Load saved data ───────────────────────────────────────────
+function loadDraft() {
+  // 1. localStorage — synchronous, instant, always up-to-date on this device
   const raw = localStorage.getItem('visa_draft_' + appId);
   if (raw) {
     try {
-      const saved = JSON.parse(raw);
-      if (saved && saved.formData && hasFormContent(saved.formData)) {
-        console.log('💾 Loaded from localStorage');
-        populateForm(saved.formData);
-        setSubmittedBadge(saved.submitted);
-        setSaveStatus('Загружено ✓', 'saved');
-        updateProgress();
-        return; // localStorage has real data — no need to hit Supabase
+      const d = JSON.parse(raw);
+      if (d && hasContent(d)) {
+        populateForm(d);
+        setStatus('Данные загружены ✓', 'saved');
+        refreshProgress();
+        return; // done — no need for Supabase
       }
-    } catch (e) { console.error('localStorage load error:', e); }
+    } catch (e) { console.error('Load from localStorage failed:', e); }
   }
 
-  // 2. No meaningful local data — try Supabase (new device / cleared storage)
-  if (!supabase) return;
-  console.log('☁️ No local data, trying Supabase…');
-  try {
-    const { data, error } = await supabase
-      .from('visa_applications').select('data, submitted').eq('id', appId).maybeSingle();
-    if (error) {
-      console.error('Supabase load error:', error);
-    } else if (data && data.data && hasFormContent(data.data)) {
-      console.log('☁️ Loaded from Supabase');
+  // 2. No local data? Try Supabase (e.g. first time on a new device)
+  if (!sb) return;
+  sb.from('visa_applications')
+    .select('data')
+    .eq('id', appId)
+    .maybeSingle()
+    .then(({ data, error }) => {
+      if (error || !data || !data.data || !hasContent(data.data)) return;
       populateForm(data.data);
-      setSubmittedBadge(data.submitted);
-      setSaveStatus('Данные загружены ✓', 'saved');
-      updateProgress();
-      saveToLocalStorage(data.submitted); // cache locally for instant next load
-    } else {
-      console.log('☁️ No data in Supabase for this ID');
-    }
-  } catch (e) {
-    console.error('Supabase load exception:', e);
-  }
+      setStatus('Данные загружены из облака ✓', 'saved');
+      refreshProgress();
+      // Cache locally so next load is instant
+      try { localStorage.setItem('visa_draft_' + appId, JSON.stringify(data.data)); } catch(e) {}
+    })
+    .catch(e => console.warn('Supabase load failed:', e));
 }
 
-function setSubmittedBadge(submitted) {
-  const badge = document.getElementById('statusBadge');
-  if (!badge) return;
-  if (submitted) {
-    badge.textContent = '✅ Подано / Submitted';
-    badge.classList.add('submitted');
-  } else {
-    badge.textContent = 'Черновик / Draft';
-    badge.classList.remove('submitted');
-  }
-}
+// ── Validation & submit ───────────────────────────────────────
+function submitApplication() {
+  // Clear previous highlights
+  document.querySelectorAll('#visaForm .invalid').forEach(el => el.classList.remove('invalid'));
 
-// ============================================================
-//  Validation & Submit
-// ============================================================
-function validateRequiredFields() {
-  document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
-  let valid = true;
-
+  let firstInvalid = null;
   REQUIRED.forEach(name => {
     const el = document.querySelector(`#visaForm [name="${name}"]`);
     if (el && !String(el.value).trim()) {
       el.classList.add('invalid');
-      valid = false;
+      if (!firstInvalid) firstInvalid = el;
     }
   });
 
-  if (!valid) {
-    const first = document.querySelector('#visaForm .invalid');
-    if (first) {
-      const sec = first.closest('.form-section');
-      if (sec) {
-        const body = sec.querySelector('.section-body');
-        const chevron = sec.querySelector('.chevron');
-        if (body) { body.style.display = 'block'; if (chevron) chevron.textContent = '▼'; }
-        const headerEl = document.querySelector('header');
-        const headerH  = headerEl ? headerEl.getBoundingClientRect().height : 140;
-        const top = sec.getBoundingClientRect().top + window.scrollY - headerH - 8;
-        window.scrollTo({ top, behavior: 'smooth' });
-      }
-      setTimeout(() => first.focus(), 400);
+  if (firstInvalid) {
+    // Open the section containing the first invalid field
+    const section = firstInvalid.closest('.form-section');
+    if (section) {
+      const body = section.querySelector('.section-body');
+      if (body && body.style.display === 'none') body.style.display = '';
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    alert('Пожалуйста, заполните все обязательные поля (*).\nPlease fill in all required fields (*).');
+    setTimeout(() => firstInvalid.focus(), 400);
+    alert('Заполните все обязательные поля (*).\nFill in all required fields (*).');
+    return;
   }
-  return valid;
+
+  if (!confirm('Подать заявку?\nSubmit application?')) return;
+
+  saveNow();
+  const badge = document.getElementById('statusBadge');
+  if (badge) { badge.textContent = '✅ Подано / Submitted'; badge.classList.add('submitted'); }
+  alert('✅ Заявка подана!\nApplication submitted!\n\nID: ' + appId);
 }
 
-async function submitApplication() {
-  if (!validateRequiredFields()) return;
-  const ok = confirm(
-    'Подать заявку? / Submit application?\n\n' +
-    'Вы сможете редактировать данные после подачи.\n' +
-    'You can still edit data after submission.'
-  );
-  if (!ok) return;
-  await saveDraft(true);
-  setSubmittedBadge(true);
-  alert(
-    '✅ Заявка подана! / Application submitted!\n\n' +
-    'ID: ' + appId + '\n\n' +
-    'Вы можете вернуться и отредактировать данные в любое время.\n' +
-    'You can return and edit your data at any time.'
-  );
-}
+const btnTop = document.getElementById('btnSubmit');
+const btnBot = document.getElementById('btnSubmitBottom');
+if (btnTop) btnTop.addEventListener('click', submitApplication);
+if (btnBot) btnBot.addEventListener('click', submitApplication);
 
-// ============================================================
-//  Event listeners
-// ============================================================
-// Autosave on every keystroke / change + update progress bar instantly
-document.getElementById('visaForm').addEventListener('input',  () => { updateProgress(); debouncedSave(); });
-document.getElementById('visaForm').addEventListener('change', () => { updateProgress(); debouncedSave(); });
-
-document.getElementById('btnSubmit').addEventListener('click',       submitApplication);
-document.getElementById('btnSubmitBottom').addEventListener('click', submitApplication);
-
-// ============================================================
-//  Active tab highlight on scroll (IntersectionObserver)
-// ============================================================
-const sectionEls = ['sec0','sec1','sec2','sec3','sec4','sec5','sec6']
-  .map(id => document.getElementById(id)).filter(Boolean);
-
+// ── Active tab highlight while scrolling ─────────────────────
 const observer = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
-      const id = entry.target.id;
       document.querySelectorAll('.tab-jump').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.target === id);
+        btn.classList.toggle('active', btn.dataset.target === entry.target.id);
       });
     }
   });
-}, { threshold: 0.25 });
+}, { threshold: 0.3 });
+document.querySelectorAll('.form-section[id]').forEach(el => observer.observe(el));
 
-sectionEls.forEach(el => observer.observe(el));
-
-// ============================================================
-//  Boot
-// ============================================================
-updateProgress();
+// ── Boot ──────────────────────────────────────────────────────
+refreshProgress();
 loadDraft();
