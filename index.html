@@ -34,7 +34,7 @@
       <button type="button" class="tab-jump" data-target="sec3">4. Семья</button>
       <button type="button" class="tab-jump" data-target="sec4">5. Работа / Финансы</button>
       <button type="button" class="tab-jump" data-target="sec5">6. Поездка</button>
-      <button type="button" class="tab-jump" data-target="sec6">7. UK / История</button>
+      <button type="button" class="tab-jump" data-target="sec6">7. UK и история поездок</button>
     </nav>
   </header>
 
@@ -649,8 +649,9 @@
             </div>
           </fieldset>
 
-          <fieldset class="sub-fieldset">
+          <fieldset class="sub-fieldset travel-history-fieldset">
             <legend>История поездок / Travel History</legend>
+            <p class="fieldset-hint">Укажите все поездки за границу за последние 10 лет: куда и когда выезжали. / List all trips abroad in the last 10 years: where you went and when.</p>
 
             <div class="field-group">
               <label>Были ли вы в UK ранее? / Visited UK before?</label>
@@ -668,9 +669,9 @@
             </div>
 
             <div class="field-group">
-              <label for="countries_visited">Страны за последние 10 лет / Countries visited in last 10 years</label>
-              <textarea id="countries_visited" name="countries_visited" rows="4"
-                placeholder="List countries and approximate dates (e.g. Turkey 2022, Russia 2019–2021)"></textarea>
+              <label for="countries_visited">Страны, которые вы посещали за последние 10 лет / Countries you have visited in the last 10 years <span class="optional">укажите страну и даты / country and dates</span></label>
+              <textarea id="countries_visited" name="countries_visited" rows="5"
+                placeholder="Например: Турция — июнь 2022; Россия — 2019–2021; ОАЭ — март 2023. / e.g. Turkey — June 2022; Russia — 2019–2021; UAE — March 2023."></textarea>
             </div>
 
             <div class="field-group">
