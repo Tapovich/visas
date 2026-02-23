@@ -126,6 +126,14 @@ header h1 {
   transition: background 0.15s;
 }
 .btn-yellow:hover { background: #e8c800; }
+.btn-yellow:disabled {
+  background: #ccc;
+  color: #888;
+  border-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.btn-yellow:disabled:hover { background: #ccc; }
 
 .progress-wrap {
   height: 5px;

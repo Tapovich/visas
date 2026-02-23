@@ -11,9 +11,14 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const isConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON !== 'YOUR_SUPABASE_ANON_KEY';
 let supabase = null;
 
-if (isConfigured) {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-} else {
+if (isConfigured && typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  } catch (e) {
+    console.warn('Supabase init failed:', e);
+    supabase = null;
+  }
+} else if (!isConfigured) {
   const w = document.getElementById('configWarning');
   if (w) w.style.display = 'block';
 }
@@ -224,12 +229,14 @@ function handlePhotoPreview(input, preview, fieldName) {
     preview.appendChild(makeRemoveBtn(input, preview, fieldName));
   }
 
-  if (isConfigured) {
+  // Always save a local data URL for the photo
+  const localReader = new FileReader();
+  localReader.onload = e => { photoUrls[fieldName] = e.target.result; };
+  localReader.readAsDataURL(file);
+
+  // Also upload to Supabase if available
+  if (supabase) {
     uploadPhoto(file, fieldName);
-  } else {
-    const reader = new FileReader();
-    reader.onload = e => { photoUrls[fieldName] = e.target.result; };
-    reader.readAsDataURL(file);
   }
 }
 
@@ -434,6 +441,21 @@ function updateProgress() {
     const done = reqs.length > 0 && reqs.every(f => data[f] && String(data[f]).trim());
     btn.classList.toggle('done', done);
   });
+
+  // Enable/disable submit buttons based on 100% completion
+  const allFilled = pct === 100;
+  const btnSubmit       = document.getElementById('btnSubmit');
+  const btnSubmitBottom = document.getElementById('btnSubmitBottom');
+  if (btnSubmit) {
+    btnSubmit.disabled = !allFilled;
+    btnSubmit.style.opacity = allFilled ? '1' : '0.5';
+    btnSubmit.style.cursor  = allFilled ? 'pointer' : 'not-allowed';
+  }
+  if (btnSubmitBottom) {
+    btnSubmitBottom.disabled = !allFilled;
+    btnSubmitBottom.style.opacity = allFilled ? '1' : '0.5';
+    btnSubmitBottom.style.cursor  = allFilled ? 'pointer' : 'not-allowed';
+  }
 }
 
 // ============================================================
@@ -460,7 +482,7 @@ async function saveDraft(submitFlag = false) {
   // Always save to localStorage
   localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag }));
 
-  if (!isConfigured) {
+  if (!supabase) {
     setSaveStatus('Сохранено локально ✓', 'saved');
     updateProgress();
     return;
@@ -486,7 +508,7 @@ async function saveDraft(submitFlag = false) {
 }
 
 async function loadDraft() {
-  if (isConfigured) {
+  if (supabase) {
     try {
       const { data, error } = await supabase
         .from('visa_applications').select('data, submitted').eq('id', appId).maybeSingle();
