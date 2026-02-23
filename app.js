@@ -539,10 +539,32 @@ function stripDataUrlsForStorage(formData) {
   return copy;
 }
 
+// Returns true if formData contains at least one non-empty field.
+// Used to prevent an empty form from overwriting real saved data
+// (e.g. beforeunload firing before async loadDraft has populated the form).
+function hasFormContent(formData) {
+  if (!formData) return false;
+  return Object.values(formData).some(v => {
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (Array.isArray(v))      return v.length > 0;
+    return false;
+  });
+}
+
 // Save to localStorage instantly (no debounce) so data never gets lost
 function saveToLocalStorage(submitFlag) {
   try {
     const formData = stripDataUrlsForStorage(collectFormData());
+    // Never overwrite existing saved data with a completely empty form.
+    // This protects against beforeunload firing while the page is still
+    // initialising (loadDraft async hasn't populated the form yet).
+    if (!hasFormContent(formData)) {
+      const existing = localStorage.getItem('visa_draft_' + appId);
+      if (!existing) {
+        console.log('💾 Skipping — form is empty and no prior save exists');
+        return;
+      }
+    }
     localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag || false }));
     console.log('💾 Saved to localStorage');
   } catch (e) {
@@ -605,43 +627,45 @@ window.addEventListener('beforeunload', () => {
 async function loadDraft() {
   console.log('🔄 Loading draft for appId:', appId);
 
-  // 1. Try loading from Supabase
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('visa_applications').select('data, submitted').eq('id', appId).maybeSingle();
-      if (error) {
-        console.error('Supabase load error:', error);
-      } else if (data && data.data) {
-        console.log('☁️ Loaded from Supabase');
-        populateForm(data.data);
-        setSubmittedBadge(data.submitted);
-        setSaveStatus('Данные загружены ✓', 'saved');
-        updateProgress();
-        return;
-      } else {
-        console.log('☁️ No data in Supabase for this ID');
-      }
-    } catch (e) {
-      console.error('Supabase load exception:', e);
-    }
-  }
-
-  // 2. Fall back to localStorage
+  // 1. localStorage FIRST — synchronous, instant, always reflects the latest
+  //    state saved on this device. Checking Supabase first was the root cause
+  //    of data loss: the async Supabase await left a window where beforeunload
+  //    could fire and overwrite localStorage with an empty form.
   const raw = localStorage.getItem('visa_draft_' + appId);
   if (raw) {
     try {
       const saved = JSON.parse(raw);
-      if (saved && saved.formData) {
+      if (saved && saved.formData && hasFormContent(saved.formData)) {
         console.log('💾 Loaded from localStorage');
         populateForm(saved.formData);
         setSubmittedBadge(saved.submitted);
         setSaveStatus('Загружено ✓', 'saved');
         updateProgress();
+        return; // localStorage has real data — no need to hit Supabase
       }
     } catch (e) { console.error('localStorage load error:', e); }
-  } else {
-    console.log('💾 No data in localStorage');
+  }
+
+  // 2. No meaningful local data — try Supabase (new device / cleared storage)
+  if (!supabase) return;
+  console.log('☁️ No local data, trying Supabase…');
+  try {
+    const { data, error } = await supabase
+      .from('visa_applications').select('data, submitted').eq('id', appId).maybeSingle();
+    if (error) {
+      console.error('Supabase load error:', error);
+    } else if (data && data.data && hasFormContent(data.data)) {
+      console.log('☁️ Loaded from Supabase');
+      populateForm(data.data);
+      setSubmittedBadge(data.submitted);
+      setSaveStatus('Данные загружены ✓', 'saved');
+      updateProgress();
+      saveToLocalStorage(data.submitted); // cache locally for instant next load
+    } else {
+      console.log('☁️ No data in Supabase for this ID');
+    }
+  } catch (e) {
+    console.error('Supabase load exception:', e);
   }
 }
 
