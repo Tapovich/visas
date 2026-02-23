@@ -334,10 +334,29 @@ function renumberChildren() {
 
 // ── Travel history (country – month – year cards) ─────────────
 const TRAVEL_COUNTRIES = [
-  'Uzbekistan', 'Russia', 'Turkey', 'UAE', 'Kazakhstan', 'Tajikistan', 'Kyrgyzstan',
-  'Azerbaijan', 'Georgia', 'Armenia', 'Ukraine', 'Belarus', 'USA', 'UK',
-  'Germany', 'France', 'Italy', 'Spain', 'China', 'India', 'Thailand', 'Egypt',
-  'Saudi Arabia', 'Malaysia', 'Indonesia', 'South Korea', 'Japan', 'Iran', 'Pakistan', 'Other',
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+  'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burma (Myanmar)',
+  'Cambodia', 'Cameroon', 'Canada', 'Chile', 'China', 'Colombia', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic',
+  'Denmark', 'Djibouti', 'Dominican Republic',
+  'Ecuador', 'Egypt', 'El Salvador', 'Estonia', 'Ethiopia',
+  'Finland', 'France',
+  'Gabon', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Guatemala', 'Guinea',
+  'Hungary',
+  'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy',
+  'Jamaica', 'Japan', 'Jordan',
+  'Kazakhstan', 'Kenya', 'Kosovo', 'Kuwait', 'Kyrgyzstan',
+  'Laos', 'Latvia', 'Lebanon', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+  'North Macedonia', 'Malaysia', 'Maldives', 'Malta', 'Mauritius', 'Mexico', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique',
+  'Nepal', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
+  'Oman', 'Pakistan', 'Palestine', 'Panama', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar',
+  'Romania', 'Russia', 'Rwanda',
+  'Saudi Arabia', 'Senegal', 'Serbia', 'Singapore', 'Slovakia', 'Slovenia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria',
+  'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Tunisia', 'Turkey', 'Turkmenistan',
+  'Uganda', 'Ukraine', 'UAE', 'UK', 'USA', 'Uruguay', 'Uzbekistan',
+  'Venezuela', 'Vietnam',
+  'Yemen',
+  'Zambia', 'Zimbabwe',
+  'Other',
 ];
 const travelHistoryList = document.getElementById('travelHistoryList');
 const tripTemplate = document.getElementById('tripTemplate');
