@@ -187,7 +187,7 @@ header h1 {
 }
 .btn-danger:hover { background: #fdecea; }
 
-/* ====== Section tabs ====== */
+/* ====== Quick-jump nav tabs ====== */
 .section-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -195,9 +195,9 @@ header h1 {
   margin-bottom: 16px;
 }
 
-.tab {
-  padding: 8px 14px;
-  font-size: 0.82rem;
+.tab-jump {
+  padding: 7px 13px;
+  font-size: 0.8rem;
   font-weight: 600;
   background: var(--white);
   border: 2px solid var(--border);
@@ -207,33 +207,62 @@ header h1 {
   transition: all 0.15s;
   font-family: var(--font);
 }
-.tab:hover { border-color: var(--blue-light); color: var(--blue-light); }
-.tab.active {
-  background: var(--blue);
-  color: var(--white);
-  border-color: var(--blue);
-}
-.tab.done { border-color: var(--green); color: var(--green); }
-.tab.done::after { content: ' ✓'; }
+.tab-jump:hover { border-color: var(--blue-light); color: var(--blue-light); background: #eef3fa; }
+.tab-jump.done { border-color: var(--green); color: var(--green); }
+.tab-jump.done::after { content: ' ✓'; }
 
-/* ====== Form sections ====== */
+/* ====== Accordion form sections ====== */
 .form-section {
-  display: none;
   background: var(--white);
   border-radius: var(--radius);
-  padding: 28px 28px 20px;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
 }
-.form-section.active { display: block; }
 
-.form-section h2 {
-  font-size: 1.2rem;
-  color: var(--blue);
-  margin-bottom: 24px;
-  padding-bottom: 12px;
-  border-bottom: 3px solid var(--blue-light);
+/* Section header — clickable to collapse */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  cursor: pointer;
+  background: var(--blue);
+  color: var(--white);
+  user-select: none;
+  transition: background 0.15s;
+}
+.section-header:hover { background: var(--blue-hover); }
+
+.section-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--white);
+}
+
+.chevron {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Section body — the collapsible content */
+.section-body {
+  padding: 24px 28px 20px;
+  display: block;
+}
+
+/* Final submit row */
+.final-submit {
+  text-align: center;
+  padding: 28px 0 8px;
+}
+.btn-large {
+  padding: 14px 40px;
+  font-size: 1.05rem;
 }
 
 /* ====== Field groups ====== */
