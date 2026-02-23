@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UK Visa Application / Заявление на визу в Великобританию</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="flag">🇬🇧</div>
+      <div>
+        <h1>UK Standard Visitor Visa</h1>
+        <p class="subtitle">Форма заявления / Application Form</p>
+      </div>
+      <div class="status-badge" id="statusBadge">Черновик / Draft</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0% заполнено / completed</div>
+  </header>
+
+  <div class="container">
+    <!-- Config warning -->
+    <div id="configWarning" class="alert alert-warning" style="display:none;">
+      ⚠️ <strong>Настройте Supabase:</strong> Откройте <code>app.js</code> и вставьте ваш
+      <code>SUPABASE_URL</code> и <code>SUPABASE_ANON_KEY</code>.
+      До этого данные не будут сохраняться в облаке.
+    </div>
+
+    <!-- Save bar -->
+    <div class="save-bar">
+      <span id="saveStatus" class="save-status">Не сохранено / Not saved</span>
+      <button class="btn btn-secondary" id="btnSaveDraft">💾 Сохранить черновик / Save Draft</button>
+      <button class="btn btn-primary" id="btnSubmit">✅ Подать заявку / Submit</button>
+    </div>
+
+    <!-- Section navigation tabs -->
+    <nav class="section-tabs" role="tablist">
+      <button class="tab active" data-section="0" role="tab">1. Личные данные</button>
+      <button class="tab" data-section="1" role="tab">2. Паспорт</button>
+      <button class="tab" data-section="2" role="tab">3. Контакты</button>
+      <button class="tab" data-section="3" role="tab">4. Семья</button>
+      <button class="tab" data-section="4" role="tab">5. Работа / Финансы</button>
+      <button class="tab" data-section="5" role="tab">6. Поездка</button>
+      <button class="tab" data-section="6" role="tab">7. Связи в UK / История</button>
+    </nav>
+
+    <form id="visaForm" novalidate>
+
+      <!-- ===================== SECTION 1: Personal Information ===================== -->
+      <section class="form-section active" data-section="0">
+        <h2>1. Личные данные / Personal Information</h2>
+
+        <div class="field-group">
+          <label for="full_name">Полное имя (как в паспорте) / Full name (as on passport) <span class="req">*</span></label>
+          <input type="text" id="full_name" name="full_name" placeholder="e.g. KARIMOV RUSTAM AKBAROVICH" />
+        </div>
+
+        <div class="field-group">
+          <label for="other_names">Другие имена / Any other names used</label>
+          <input type="text" id="other_names" name="other_names" placeholder="e.g. nicknames, previous names, maiden name" />
+        </div>
+
+        <div class="field-group">
+          <label for="dob">Дата рождения / Date of birth <span class="req">*</span></label>
+          <input type="date" id="dob" name="dob" />
+        </div>
+
+        <div class="field-group">
+          <label for="place_of_birth">Место рождения / Place of birth <span class="req">*</span></label>
+          <input type="text" id="place_of_birth" name="place_of_birth" placeholder="e.g. Tashkent, Uzbekistan" />
+        </div>
+
+        <div class="field-group">
+          <label for="nationality">Текущее гражданство / Current nationality <span class="req">*</span></label>
+          <input type="text" id="nationality" name="nationality" placeholder="e.g. Uzbek" />
+        </div>
+
+        <div class="field-group">
+          <label for="national_id">Номер удостоверения личности / National identity number</label>
+          <input type="text" id="national_id" name="national_id" placeholder="If applicable" />
+        </div>
+
+        <div class="field-group">
+          <label for="gender">Пол / Gender <span class="req">*</span></label>
+          <select id="gender" name="gender">
+            <option value="">— Выберите / Select —</option>
+            <option value="Male">Мужской / Male</option>
+            <option value="Female">Женский / Female</option>
+            <option value="Other">Другой / Other</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="marital_status">Семейное положение / Marital status <span class="req">*</span></label>
+          <select id="marital_status" name="marital_status">
+            <option value="">— Выберите / Select —</option>
+            <option value="Single">Холост/Не замужем / Single</option>
+            <option value="Married">Женат/Замужем / Married</option>
+            <option value="Divorced">Разведён/Разведена / Divorced</option>
+            <option value="Widowed">Вдовец/Вдова / Widowed</option>
+            <option value="Separated">В разлучении / Separated</option>
+            <option value="Civil partnership">Гражданский брак / Civil partnership</option>
+          </select>
+        </div>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-primary next-btn" data-next="1">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 2: Passport Details ===================== -->
+      <section class="form-section" data-section="1">
+        <h2>2. Паспортные данные / Passport Details</h2>
+
+        <div class="field-group">
+          <label for="passport_number">Номер паспорта / Passport number <span class="req">*</span></label>
+          <input type="text" id="passport_number" name="passport_number" placeholder="e.g. AA1234567" />
+        </div>
+
+        <div class="field-group">
+          <label for="passport_issue_date">Дата выдачи / Date of issue <span class="req">*</span></label>
+          <input type="date" id="passport_issue_date" name="passport_issue_date" />
+        </div>
+
+        <div class="field-group">
+          <label for="passport_expiry_date">Дата окончания срока / Date of expiry <span class="req">*</span></label>
+          <input type="date" id="passport_expiry_date" name="passport_expiry_date" />
+        </div>
+
+        <div class="field-group">
+          <label for="passport_place_of_issue">Место выдачи / Place of issue <span class="req">*</span></label>
+          <input type="text" id="passport_place_of_issue" name="passport_place_of_issue" placeholder="e.g. Tashkent, Uzbekistan" />
+        </div>
+
+        <div class="field-group photo-upload-group">
+          <label>Фото паспорта (основная страница) / Passport photo page <span class="optional">необязательно / optional</span></label>
+          <div class="photo-upload-area" id="photoArea_own_passport">
+            <input type="file" id="photo_own_passport" name="photo_own_passport" accept="image/*,.pdf" class="file-input" />
+            <label for="photo_own_passport" class="photo-label">
+              <span class="upload-icon">📎</span>
+              <span class="upload-text">Прикрепить фото / Attach photo</span>
+            </label>
+            <div class="photo-preview" id="preview_own_passport"></div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Есть ли другие действующие паспорта? / Do you have any other current passports?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="other_passports_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="other_passports_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="otherPassportsDetails" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="other_passports_details">Данные других паспортов / Other passport details</label>
+            <textarea id="other_passports_details" name="other_passports_details" rows="3"
+              placeholder="Country, passport number, expiry date for each passport"></textarea>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Был ли у вас паспорт другой страны? / Have you had a passport from a different country?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="prev_country_passport_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="prev_country_passport_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="prevCountryPassportDetails" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="prev_country_passport_details">Данные предыдущего паспорта другой страны / Previous country passport details</label>
+            <textarea id="prev_country_passport_details" name="prev_country_passport_details" rows="3"
+              placeholder="Country, passport number, period of validity"></textarea>
+          </div>
+        </div>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="0">← Назад / Back</button>
+          <button type="button" class="btn btn-primary next-btn" data-next="2">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 3: Contact Information ===================== -->
+      <section class="form-section" data-section="2">
+        <h2>3. Контактная информация / Contact Information</h2>
+
+        <div class="field-group">
+          <label for="home_address">Домашний адрес / Current home address <span class="req">*</span></label>
+          <textarea id="home_address" name="home_address" rows="3"
+            placeholder="Full address including city, region, postcode/index"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="address_duration">Как долго живёте по этому адресу? / How long at this address? <span class="req">*</span></label>
+          <input type="text" id="address_duration" name="address_duration" placeholder="e.g. 5 years 3 months" />
+        </div>
+
+        <div class="field-group">
+          <label>Жили ли по этому адресу менее 10 лет? / Lived here less than 10 years?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="prev_addresses_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="prev_addresses_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="prevAddressesBlock" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="prev_addresses">Предыдущие адреса / Previous addresses</label>
+            <textarea id="prev_addresses" name="prev_addresses" rows="4"
+              placeholder="List previous addresses (last 10 years) with dates of residence"></textarea>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="mobile_phone">Мобильный телефон / Mobile phone number <span class="req">*</span></label>
+          <input type="tel" id="mobile_phone" name="mobile_phone" placeholder="e.g. +998 90 123 45 67" />
+        </div>
+
+        <div class="field-group">
+          <label for="email">Электронная почта / Email address <span class="req">*</span></label>
+          <input type="email" id="email" name="email" placeholder="e.g. rustam@example.com" />
+        </div>
+
+        <div class="field-group">
+          <label>Адрес для корреспонденции отличается? / Is correspondence address different?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="corr_address_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="corr_address_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="corrAddressBlock" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="corr_address">Адрес для корреспонденции / Correspondence address</label>
+            <textarea id="corr_address" name="corr_address" rows="3"
+              placeholder="Full correspondence address"></textarea>
+          </div>
+        </div>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="1">← Назад / Back</button>
+          <button type="button" class="btn btn-primary next-btn" data-next="3">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 4: Family Details ===================== -->
+      <section class="form-section" data-section="3">
+        <h2>4. Сведения о семье / Family Details</h2>
+
+        <fieldset class="sub-fieldset">
+          <legend>Отец / Father</legend>
+          <div class="field-group">
+            <label for="father_name">ФИО отца / Father's full name <span class="req">*</span></label>
+            <input type="text" id="father_name" name="father_name" placeholder="e.g. KARIMOV AKBAR RAXIMOVICH" />
+          </div>
+          <div class="field-group">
+            <label for="father_dob">Дата рождения отца / Father's date of birth <span class="req">*</span></label>
+            <input type="date" id="father_dob" name="father_dob" />
+          </div>
+          <div class="field-group photo-upload-group">
+            <label>Фото паспорта отца / Father's passport photo <span class="optional">необязательно / optional</span></label>
+            <div class="photo-upload-area">
+              <input type="file" id="photo_father_passport" name="photo_father_passport" accept="image/*,.pdf" class="file-input" />
+              <label for="photo_father_passport" class="photo-label">
+                <span class="upload-icon">📎</span>
+                <span class="upload-text">Прикрепить фото / Attach photo</span>
+              </label>
+              <div class="photo-preview" id="preview_father_passport"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="sub-fieldset">
+          <legend>Мать / Mother</legend>
+          <div class="field-group">
+            <label for="mother_name">ФИО матери / Mother's full name <span class="req">*</span></label>
+            <input type="text" id="mother_name" name="mother_name" placeholder="e.g. KARIMOVA MALIKA YUSUPOVNA" />
+          </div>
+          <div class="field-group">
+            <label for="mother_dob">Дата рождения матери / Mother's date of birth <span class="req">*</span></label>
+            <input type="date" id="mother_dob" name="mother_dob" />
+          </div>
+          <div class="field-group photo-upload-group">
+            <label>Фото паспорта матери / Mother's passport photo <span class="optional">необязательно / optional</span></label>
+            <div class="photo-upload-area">
+              <input type="file" id="photo_mother_passport" name="photo_mother_passport" accept="image/*,.pdf" class="file-input" />
+              <label for="photo_mother_passport" class="photo-label">
+                <span class="upload-icon">📎</span>
+                <span class="upload-text">Прикрепить фото / Attach photo</span>
+              </label>
+              <div class="photo-preview" id="preview_mother_passport"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Spouse — shown conditionally -->
+        <div id="spouseBlock" style="display:none;">
+          <fieldset class="sub-fieldset">
+            <legend>Супруг(а) / Spouse</legend>
+            <div class="field-group">
+              <label for="spouse_name">ФИО супруга(и) / Spouse's full name</label>
+              <input type="text" id="spouse_name" name="spouse_name" placeholder="e.g. KARIMOVA ZULFIYA ALIYEVNA" />
+            </div>
+            <div class="field-group">
+              <label for="spouse_dob">Дата рождения / Spouse's date of birth</label>
+              <input type="date" id="spouse_dob" name="spouse_dob" />
+            </div>
+            <div class="field-group">
+              <label for="spouse_nationality">Гражданство / Spouse's nationality</label>
+              <input type="text" id="spouse_nationality" name="spouse_nationality" placeholder="e.g. Uzbek" />
+            </div>
+            <div class="field-group">
+              <label for="spouse_passport_number">Номер паспорта супруга(и) / Spouse's passport number</label>
+              <input type="text" id="spouse_passport_number" name="spouse_passport_number" placeholder="e.g. AA7654321" />
+            </div>
+            <div class="field-group photo-upload-group">
+              <label>Фото паспорта супруга(и) / Spouse's passport photo <span class="optional">необязательно / optional</span></label>
+              <div class="photo-upload-area">
+                <input type="file" id="photo_spouse_passport" name="photo_spouse_passport" accept="image/*,.pdf" class="file-input" />
+                <label for="photo_spouse_passport" class="photo-label">
+                  <span class="upload-icon">📎</span>
+                  <span class="upload-text">Прикрепить фото / Attach photo</span>
+                </label>
+                <div class="photo-preview" id="preview_spouse_passport"></div>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Children -->
+        <fieldset class="sub-fieldset">
+          <legend>Дети / Children</legend>
+          <div class="field-group">
+            <label>Есть ли у вас дети? / Do you have any children?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="children_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="children_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+
+          <div id="childrenBlock" style="display:none;">
+            <div id="childrenList"></div>
+            <button type="button" class="btn btn-secondary" id="addChildBtn">+ Добавить ребёнка / Add child</button>
+          </div>
+        </fieldset>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="2">← Назад / Back</button>
+          <button type="button" class="btn btn-primary next-btn" data-next="4">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 5: Employment & Financial ===================== -->
+      <section class="form-section" data-section="4">
+        <h2>5. Работа и финансы / Employment & Financial Information</h2>
+
+        <div class="field-group">
+          <label for="occupation">Текущая профессия / Current occupation <span class="req">*</span></label>
+          <input type="text" id="occupation" name="occupation" placeholder="e.g. Engineer, Teacher, Director" />
+        </div>
+
+        <div class="field-group">
+          <label for="employment_status">Статус занятости / Employment status <span class="req">*</span></label>
+          <select id="employment_status" name="employment_status">
+            <option value="">— Выберите / Select —</option>
+            <option value="Employed">Работаю / Employed</option>
+            <option value="Self-employed">Самозанятый / Self-employed</option>
+            <option value="Retired">Пенсионер / Retired</option>
+            <option value="Student">Студент / Student</option>
+            <option value="Unemployed">Безработный / Unemployed</option>
+          </select>
+        </div>
+
+        <!-- Employed -->
+        <div id="employedBlock" class="conditional-block" style="display:none;">
+          <fieldset class="sub-fieldset">
+            <legend>Сведения о работодателе / Employer details</legend>
+            <div class="field-group">
+              <label for="employer_name">Название организации / Employer's name</label>
+              <input type="text" id="employer_name" name="employer_name" placeholder="e.g. LLC Tashkent Construction" />
+            </div>
+            <div class="field-group">
+              <label for="employer_address">Адрес организации / Employer's address</label>
+              <input type="text" id="employer_address" name="employer_address" placeholder="Full address" />
+            </div>
+            <div class="field-group">
+              <label for="employer_phone">Телефон организации / Employer's phone</label>
+              <input type="tel" id="employer_phone" name="employer_phone" placeholder="e.g. +998 71 123 45 67" />
+            </div>
+            <div class="field-group">
+              <label for="job_title">Должность / Job title</label>
+              <input type="text" id="job_title" name="job_title" placeholder="e.g. Senior Engineer" />
+            </div>
+            <div class="field-group">
+              <label for="employment_duration">Как долго работаете? / How long employed there?</label>
+              <input type="text" id="employment_duration" name="employment_duration" placeholder="e.g. 3 years 6 months" />
+            </div>
+            <div class="field-group">
+              <label for="salary">Зарплата в месяц/год / Monthly/annual salary</label>
+              <input type="text" id="salary" name="salary" placeholder="e.g. 5,000,000 UZS/month or USD equivalent" />
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Self-employed -->
+        <div id="selfEmployedBlock" class="conditional-block" style="display:none;">
+          <fieldset class="sub-fieldset">
+            <legend>Самозанятость / Self-employment</legend>
+            <div class="field-group">
+              <label for="business_nature">Вид деятельности / Nature of business</label>
+              <input type="text" id="business_nature" name="business_nature" placeholder="e.g. trading, construction, consulting" />
+            </div>
+            <div class="field-group">
+              <label for="self_employed_income">Доход в месяц/год / Monthly/annual income</label>
+              <input type="text" id="self_employed_income" name="self_employed_income" placeholder="e.g. 8,000,000 UZS/month" />
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Retired -->
+        <div id="retiredBlock" class="conditional-block" style="display:none;">
+          <fieldset class="sub-fieldset">
+            <legend>Пенсионер / Retired</legend>
+            <div class="field-group">
+              <label for="prev_occupation">Предыдущая профессия / Previous occupation</label>
+              <input type="text" id="prev_occupation" name="prev_occupation" placeholder="e.g. Engineer, Teacher" />
+            </div>
+            <div class="field-group">
+              <label for="pension_source">Источник пенсии/дохода / Source of pension/income</label>
+              <input type="text" id="pension_source" name="pension_source" placeholder="e.g. State pension, savings" />
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Student -->
+        <div id="studentBlock" class="conditional-block" style="display:none;">
+          <fieldset class="sub-fieldset">
+            <legend>Студент / Student</legend>
+            <div class="field-group">
+              <label for="school_name">Название учебного заведения / Name of school/university</label>
+              <input type="text" id="school_name" name="school_name" placeholder="e.g. Tashkent State Technical University" />
+            </div>
+            <div class="field-group">
+              <label for="school_address">Адрес / Address</label>
+              <input type="text" id="school_address" name="school_address" placeholder="Full address" />
+            </div>
+          </fieldset>
+        </div>
+
+        <fieldset class="sub-fieldset">
+          <legend>Финансы / Finances</legend>
+          <div class="field-group">
+            <label for="trip_payer">Кто оплачивает поездку? / Who is paying for the trip? <span class="req">*</span></label>
+            <select id="trip_payer" name="trip_payer">
+              <option value="">— Выберите / Select —</option>
+              <option value="Self">Сам / Self</option>
+              <option value="Family member">Член семьи / Family member</option>
+              <option value="Friend">Друг / Friend</option>
+              <option value="Sponsor">Спонсор / Sponsor</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="monthly_expenses">Ежемесячные расходы на жизнь / Monthly living costs</label>
+            <input type="text" id="monthly_expenses" name="monthly_expenses" placeholder="e.g. 3,000,000 UZS" />
+          </div>
+          <div class="field-group">
+            <label for="savings">Сбережения для поездки / Total savings for this trip <span class="req">*</span></label>
+            <input type="text" id="savings" name="savings" placeholder="e.g. USD 5,000 or equivalent" />
+          </div>
+          <div class="field-group">
+            <label>Есть ли у вас недвижимость? / Do you own any property?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="property_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="property_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="propertyBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="property_value">Оценочная стоимость / Estimated property value</label>
+              <input type="text" id="property_value" name="property_value" placeholder="e.g. USD 80,000" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Другие источники дохода? / Other sources of income?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="other_income_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="other_income_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="otherIncomeBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="other_income_details">Другие доходы / Other income details</label>
+              <textarea id="other_income_details" name="other_income_details" rows="3"
+                placeholder="Describe source and amount"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="3">← Назад / Back</button>
+          <button type="button" class="btn btn-primary next-btn" data-next="5">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 6: Travel Details ===================== -->
+      <section class="form-section" data-section="5">
+        <h2>6. Детали поездки / Travel Details</h2>
+
+        <div class="field-group">
+          <label for="arrival_date">Планируемая дата въезда / Intended arrival date <span class="req">*</span></label>
+          <input type="date" id="arrival_date" name="arrival_date" />
+        </div>
+
+        <div class="field-group">
+          <label for="departure_date">Планируемая дата выезда / Intended departure date <span class="req">*</span></label>
+          <input type="date" id="departure_date" name="departure_date" />
+        </div>
+
+        <div class="field-group">
+          <label for="stay_duration">Продолжительность пребывания (дней) / Length of stay (days) <span class="req">*</span></label>
+          <input type="number" id="stay_duration" name="stay_duration" min="1" max="180" placeholder="e.g. 14" />
+        </div>
+
+        <div class="field-group">
+          <label>Куплен ли билет? / Have you booked your travel ticket?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="ticket_booked_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="ticket_booked_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="ticketBlock" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="ticket_details">Детали билета / Ticket details</label>
+            <textarea id="ticket_details" name="ticket_details" rows="2"
+              placeholder="Flight number, airline, booking reference, date"></textarea>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="visit_purpose">Основная цель визита / Main purpose of visit <span class="req">*</span></label>
+          <select id="visit_purpose" name="visit_purpose">
+            <option value="">— Выберите / Select —</option>
+            <option value="Tourism">Туризм / Tourism</option>
+            <option value="Visiting family/friends">Посещение семьи/друзей / Visiting family or friends</option>
+            <option value="Business">Бизнес / Business</option>
+            <option value="Medical">Лечение / Medical</option>
+            <option value="Other">Другое / Other</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="accommodation">Где будете жить? / Where will you be staying? <span class="req">*</span></label>
+          <textarea id="accommodation" name="accommodation" rows="3"
+            placeholder="Hotel name and address, or friend/family full address in UK"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Забронировано ли жильё? / Have you booked accommodation?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="accommodation_booked_yn" value="Yes" /> Да / Yes</label>
+            <label><input type="radio" name="accommodation_booked_yn" value="No" checked /> Нет / No</label>
+          </div>
+        </div>
+
+        <div id="accommodationBookedBlock" class="conditional-block" style="display:none;">
+          <div class="field-group">
+            <label for="accommodation_booking_details">Детали бронирования / Booking details</label>
+            <textarea id="accommodation_booking_details" name="accommodation_booking_details" rows="2"
+              placeholder="Booking reference, hotel confirmation number, dates"></textarea>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="places_to_visit">Какие места планируете посетить? / Places to visit in UK</label>
+          <textarea id="places_to_visit" name="places_to_visit" rows="3"
+            placeholder="e.g. London, Manchester, Edinburgh. Attractions, museums, etc."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="travel_companions">С кем едете? / Who will you be traveling with?</label>
+          <textarea id="travel_companions" name="travel_companions" rows="2"
+            placeholder="Alone, or list names and relationships of companions"></textarea>
+        </div>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="4">← Назад / Back</button>
+          <button type="button" class="btn btn-primary next-btn" data-next="6">Далее / Next →</button>
+        </div>
+      </section>
+
+      <!-- ===================== SECTION 7: UK Connections & Travel History ===================== -->
+      <section class="form-section" data-section="6">
+        <h2>7. Связи в UK и история поездок / UK Connections & Travel History</h2>
+
+        <fieldset class="sub-fieldset">
+          <legend>Связи в Великобритании / UK Connections</legend>
+
+          <div class="field-group">
+            <label>Есть ли у вас родственники в UK? / Family members in UK?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="uk_family_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="uk_family_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="ukFamilyBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="uk_family_details">Данные родственников в UK / UK family details</label>
+              <textarea id="uk_family_details" name="uk_family_details" rows="4"
+                placeholder="Name, relationship, immigration status (British citizen / PR / visa), address in UK"></textarea>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Есть ли у вас друзья в UK? / Friends in UK?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="uk_friends_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="uk_friends_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="ukFriendsBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="uk_friends_details">Данные друзей в UK / UK friends details</label>
+              <textarea id="uk_friends_details" name="uk_friends_details" rows="3"
+                placeholder="Name, immigration status, address, contact details"></textarea>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Кто-то будет поддерживать вас финансово в UK? / Someone sponsoring you in UK?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="uk_sponsor_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="uk_sponsor_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="ukSponsorBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="uk_sponsor_details">Данные спонсора / Sponsor details</label>
+              <textarea id="uk_sponsor_details" name="uk_sponsor_details" rows="3"
+                placeholder="Name, relationship, address, immigration status, how they will support you"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="sub-fieldset">
+          <legend>История поездок / Travel History</legend>
+
+          <div class="field-group">
+            <label>Были ли вы в UK ранее? / Visited UK before?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="prev_uk_visit_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="prev_uk_visit_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="prevUkVisitBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="prev_uk_visit_details">Даты и продолжительность визитов в UK / Previous UK visit details</label>
+              <textarea id="prev_uk_visit_details" name="prev_uk_visit_details" rows="3"
+                placeholder="When and for how long (e.g. June 2019, 2 weeks)"></textarea>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="countries_visited">Страны, которые вы посетили за последние 10 лет / Countries visited in last 10 years</label>
+            <textarea id="countries_visited" name="countries_visited" rows="4"
+              placeholder="List countries and approximate dates (e.g. Turkey 2022, Russia 2019–2021)"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label>Есть ли у вас другие действующие визы? / Other valid visas?</label>
+            <div class="radio-group">
+              <label><input type="radio" name="other_visas_yn" value="Yes" /> Да / Yes</label>
+              <label><input type="radio" name="other_visas_yn" value="No" checked /> Нет / No</label>
+            </div>
+          </div>
+          <div id="otherVisasBlock" class="conditional-block" style="display:none;">
+            <div class="field-group">
+              <label for="other_visas_details">Другие визы / Other visa details</label>
+              <textarea id="other_visas_details" name="other_visas_details" rows="2"
+                placeholder="Country, visa type, expiry date"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="section-nav">
+          <button type="button" class="btn btn-secondary prev-btn" data-prev="5">← Назад / Back</button>
+          <button type="button" class="btn btn-primary" id="btnSubmitBottom">✅ Подать заявку / Submit</button>
+        </div>
+      </section>
+
+    </form><!-- /visaForm -->
+  </div><!-- /container -->
+
+  <footer>
+    <p>ID заявки / Application ID: <code id="appIdDisplay">—</code></p>
+    <p>Данные сохраняются в Supabase. / Data stored in Supabase.</p>
+  </footer>
+
+  <!-- Child template (hidden) -->
+  <template id="childTemplate">
+    <div class="child-entry sub-fieldset">
+      <div class="child-header">
+        <strong>Ребёнок / Child #<span class="child-num"></span></strong>
+        <button type="button" class="btn btn-danger remove-child-btn">✕ Удалить</button>
+      </div>
+      <div class="field-group">
+        <label>Имя / Name</label>
+        <input type="text" name="child_name" placeholder="Child's full name" />
+      </div>
+      <div class="field-group">
+        <label>Дата рождения / Date of birth</label>
+        <input type="date" name="child_dob" />
+      </div>
+      <div class="field-group">
+        <label>Гражданство / Nationality</label>
+        <input type="text" name="child_nationality" placeholder="e.g. Uzbek" />
+      </div>
+      <div class="field-group">
+        <label>Где живёт / Where lives</label>
+        <input type="text" name="child_location" placeholder="City, country" />
+      </div>
+      <div class="field-group photo-upload-group">
+        <label>Фото паспорта / Passport photo <span class="optional">необязательно / optional</span></label>
+        <div class="photo-upload-area">
+          <input type="file" name="child_passport_photo" accept="image/*,.pdf" class="file-input child-photo-input" />
+          <label class="photo-label">
+            <span class="upload-icon">📎</span>
+            <span class="upload-text">Прикрепить фото / Attach photo</span>
+          </label>
+          <div class="photo-preview child-photo-preview"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
