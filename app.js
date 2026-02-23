@@ -48,7 +48,9 @@ document.querySelectorAll('.section-header').forEach(header => {
     const sec = header.closest('.form-section');
     const body = sec.querySelector('.section-body');
     const chevron = header.querySelector('.chevron');
-    const isOpen = body.style.display !== 'none';
+    // Use dataset to track open/closed state reliably
+    const isOpen = sec.dataset.collapsed !== 'true';
+    sec.dataset.collapsed = isOpen ? 'true' : 'false';
     body.style.display = isOpen ? 'none' : 'block';
     chevron.textContent = isOpen ? '▶' : '▼';
   });
@@ -61,18 +63,16 @@ document.querySelectorAll('.tab-jump').forEach(btn => {
     if (!target) return;
 
     // Open section if collapsed
-    const body = target.querySelector('.section-body');
-    const chevron = target.querySelector('.chevron');
-    if (body && body.style.display === 'none') {
-      body.style.display = 'block';
+    if (target.dataset.collapsed === 'true') {
+      const body = target.querySelector('.section-body');
+      const chevron = target.querySelector('.chevron');
+      target.dataset.collapsed = 'false';
+      if (body) body.style.display = 'block';
       if (chevron) chevron.textContent = '▼';
     }
 
-    // Calculate exact header height and scroll manually
-    const headerEl = document.querySelector('header');
-    const headerH  = headerEl ? headerEl.getBoundingClientRect().height : 140;
-    const targetTop = target.getBoundingClientRect().top + window.scrollY - headerH - 8;
-    window.scrollTo({ top: targetTop, behavior: 'smooth' });
+    // scroll-margin-top in CSS already offsets the sticky header
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 });
 
@@ -221,10 +221,10 @@ function handlePhotoPreview(input, preview, fieldName) {
   if (!file) return;
   preview.innerHTML = '';
 
-  // Show a loading placeholder immediately so user gets feedback
+  // Show file name immediately so user sees feedback before FileReader finishes
   const loadingSpan = document.createElement('span');
   loadingSpan.className = 'pdf-icon';
-  loadingSpan.textContent = '⏳ Загрузка... / Loading...';
+  loadingSpan.textContent = '⏳ ' + file.name;
   preview.appendChild(loadingSpan);
 
   // Try to show image preview; fallback to file icon for PDF/HEIC/unsupported
@@ -330,6 +330,17 @@ document.querySelectorAll('.photo-upload-area').forEach(area => {
   });
 });
 
+// Explicitly wire photo-label clicks to their file inputs.
+// Safari/WebKit can silently ignore the HTML for="..." association
+// when the input is positioned off-screen, so we handle it in JS too.
+document.querySelectorAll('.photo-label[for]').forEach(label => {
+  label.addEventListener('click', e => {
+    e.preventDefault();
+    const input = document.getElementById(label.getAttribute('for'));
+    if (input) input.click();
+  });
+});
+
 // ============================================================
 //  Collect / populate form data
 // ============================================================
@@ -375,54 +386,59 @@ function collectFormData() {
 
 function populateForm(data) {
   if (!data) return;
+  isPopulating = true;
 
-  // Text / select / textarea
-  Object.entries(data).forEach(([name, value]) => {
-    if (typeof value !== 'string') return;
-    const el = document.querySelector(`#visaForm [name="${name}"]`);
-    if (el && el.type !== 'radio' && el.type !== 'file') {
-      el.value = value;
+  try {
+    // Text / select / textarea
+    Object.entries(data).forEach(([name, value]) => {
+      if (typeof value !== 'string') return;
+      const el = document.querySelector(`#visaForm [name="${name}"]`);
+      if (el && el.type !== 'radio' && el.type !== 'file') {
+        el.value = value;
+      }
+    });
+
+    // Radios
+    const radioNames = new Set();
+    document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => radioNames.add(r.name));
+    radioNames.forEach(name => {
+      if (!data[name]) return;
+      const radio = document.querySelector(`input[name="${name}"][value="${data[name]}"]`);
+      if (radio) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    // Re-trigger selects for conditional blocks
+    if (empStatusSel) empStatusSel.dispatchEvent(new Event('change'));
+    updateSpouse();
+
+    // Children
+    if (Array.isArray(data.children) && data.children.length > 0) {
+      childrenList.innerHTML = '';
+      childCount = 0;
+      data.children.forEach(c => addChild(c));
+      const yn = document.querySelector('input[name="children_yn"][value="Yes"]');
+      if (yn) { yn.checked = true; document.getElementById('childrenBlock').style.display = 'block'; }
     }
-  });
 
-  // Radios
-  const radioNames = new Set();
-  document.querySelectorAll('#visaForm input[type="radio"]').forEach(r => radioNames.add(r.name));
-  radioNames.forEach(name => {
-    if (!data[name]) return;
-    const radio = document.querySelector(`input[name="${name}"][value="${data[name]}"]`);
-    if (radio) {
-      radio.checked = true;
-      radio.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  });
-
-  // Re-trigger selects for conditional blocks
-  if (empStatusSel) empStatusSel.dispatchEvent(new Event('change'));
-  updateSpouse();
-
-  // Children
-  if (Array.isArray(data.children) && data.children.length > 0) {
-    childrenList.innerHTML = '';
-    childCount = 0;
-    data.children.forEach(c => addChild(c));
-    const yn = document.querySelector('input[name="children_yn"][value="Yes"]');
-    if (yn) { yn.checked = true; document.getElementById('childrenBlock').style.display = 'block'; }
+    // Photos
+    [
+      { key: 'photo_own_passport_url',    previewId: 'preview_own_passport',    field: 'own_passport' },
+      { key: 'photo_father_passport_url', previewId: 'preview_father_passport', field: 'father_passport' },
+      { key: 'photo_mother_passport_url', previewId: 'preview_mother_passport', field: 'mother_passport' },
+      { key: 'photo_spouse_passport_url', previewId: 'preview_spouse_passport', field: 'spouse_passport' },
+    ].forEach(({ key, previewId, field }) => {
+      const url = data[key];
+      if (!url) return;
+      photoUrls[field] = url;
+      const preview = document.getElementById(previewId);
+      if (preview) showSavedPhoto(preview, url, field);
+    });
+  } finally {
+    isPopulating = false;
   }
-
-  // Photos
-  [
-    { key: 'photo_own_passport_url',    previewId: 'preview_own_passport',    field: 'own_passport' },
-    { key: 'photo_father_passport_url', previewId: 'preview_father_passport', field: 'father_passport' },
-    { key: 'photo_mother_passport_url', previewId: 'preview_mother_passport', field: 'mother_passport' },
-    { key: 'photo_spouse_passport_url', previewId: 'preview_spouse_passport', field: 'spouse_passport' },
-  ].forEach(({ key, previewId, field }) => {
-    const url = data[key];
-    if (!url) return;
-    photoUrls[field] = url;
-    const preview = document.getElementById(previewId);
-    if (preview) showSavedPhoto(preview, url, field);
-  });
 }
 
 function showSavedPhoto(preview, url, fieldName) {
@@ -491,6 +507,7 @@ function updateProgress() {
 //  Save / Load
 // ============================================================
 let saveTimer = null;
+let isPopulating = false; // prevents saving while loadDraft populates the form
 
 function setSaveStatus(msg, state) {
   const el = document.getElementById('saveStatus');
@@ -499,10 +516,33 @@ function setSaveStatus(msg, state) {
   el.className = 'save-status-inline ' + (state || '');
 }
 
+// Strip base64 data URLs before persisting to localStorage.
+// Base64-encoded images can easily exceed the 5 MB localStorage quota,
+// causing setItem() to throw and losing ALL saved text data silently.
+function stripDataUrlsForStorage(formData) {
+  const copy = { ...formData };
+  const photoKeys = [
+    'photo_own_passport_url',
+    'photo_father_passport_url',
+    'photo_mother_passport_url',
+    'photo_spouse_passport_url',
+  ];
+  photoKeys.forEach(k => {
+    if (copy[k] && copy[k].startsWith('data:')) copy[k] = '';
+  });
+  if (Array.isArray(copy.children)) {
+    copy.children = copy.children.map(c => ({
+      ...c,
+      photo_url: (c.photo_url && c.photo_url.startsWith('data:')) ? '' : c.photo_url,
+    }));
+  }
+  return copy;
+}
+
 // Save to localStorage instantly (no debounce) so data never gets lost
 function saveToLocalStorage(submitFlag) {
   try {
-    const formData = collectFormData();
+    const formData = stripDataUrlsForStorage(collectFormData());
     localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag || false }));
     console.log('💾 Saved to localStorage');
   } catch (e) {
@@ -511,6 +551,7 @@ function saveToLocalStorage(submitFlag) {
 }
 
 function debouncedSave() {
+  if (isPopulating) return; // don't save while loading/populating form
   // Instantly save to localStorage so data persists even if page closes
   saveToLocalStorage(false);
   // Debounce only the Supabase cloud save
