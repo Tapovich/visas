@@ -11,16 +11,19 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const isConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON !== 'YOUR_SUPABASE_ANON_KEY';
 let supabase = null;
 
-if (isConfigured && typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-  try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  } catch (e) {
-    console.warn('Supabase init failed:', e);
-    supabase = null;
+// The CDN exposes the library as window.supabase (the whole module).
+// createClient lives at window.supabase.createClient
+try {
+  const _lib = window.supabase; // the supabase-js module object
+  if (isConfigured && _lib && typeof _lib.createClient === 'function') {
+    supabase = _lib.createClient(SUPABASE_URL, SUPABASE_ANON);
+    console.log('✅ Supabase client initialized');
+  } else if (!isConfigured) {
+    const w = document.getElementById('configWarning');
+    if (w) w.style.display = 'block';
   }
-} else if (!isConfigured) {
-  const w = document.getElementById('configWarning');
-  if (w) w.style.display = 'block';
+} catch (e) {
+  console.error('Supabase init failed:', e);
 }
 
 // ============================================================
@@ -56,13 +59,20 @@ document.querySelectorAll('.tab-jump').forEach(btn => {
   btn.addEventListener('click', () => {
     const target = document.getElementById(btn.dataset.target);
     if (!target) return;
+
+    // Open section if collapsed
     const body = target.querySelector('.section-body');
     const chevron = target.querySelector('.chevron');
-    if (body.style.display === 'none') {
+    if (body && body.style.display === 'none') {
       body.style.display = 'block';
-      chevron.textContent = '▼';
+      if (chevron) chevron.textContent = '▼';
     }
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Calculate exact header height and scroll manually
+    const headerEl = document.querySelector('header');
+    const headerH  = headerEl ? headerEl.getBoundingClientRect().height : 140;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - headerH - 8;
+    window.scrollTo({ top: targetTop, behavior: 'smooth' });
   });
 });
 
@@ -564,13 +574,15 @@ function validateRequiredFields() {
   if (!valid) {
     const first = document.querySelector('#visaForm .invalid');
     if (first) {
-      // Open section and scroll to it
       const sec = first.closest('.form-section');
       if (sec) {
         const body = sec.querySelector('.section-body');
         const chevron = sec.querySelector('.chevron');
-        if (body) { body.style.display = 'block'; chevron.textContent = '▼'; }
-        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (body) { body.style.display = 'block'; if (chevron) chevron.textContent = '▼'; }
+        const headerEl = document.querySelector('header');
+        const headerH  = headerEl ? headerEl.getBoundingClientRect().height : 140;
+        const top = sec.getBoundingClientRect().top + window.scrollY - headerH - 8;
+        window.scrollTo({ top, behavior: 'smooth' });
       }
       setTimeout(() => first.focus(), 400);
     }
