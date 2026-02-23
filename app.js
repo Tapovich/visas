@@ -115,7 +115,11 @@ function refreshEmp() {
 if (empSel) empSel.addEventListener('change', refreshEmp);
 
 // ── Photo upload helpers ──────────────────────────────────────
-const photoUrls = {};  // fieldName → data URL (in-memory only, not persisted)
+// We store URLs here; only http(s) URLs are persisted (Supabase Storage).
+// data: URLs are shown in preview but never saved (would exceed localStorage quota).
+const photoUrls = {};
+const PHOTO_KEYS = ['photo_own_passport_url', 'photo_father_passport_url', 'photo_mother_passport_url', 'photo_spouse_passport_url'];
+const PHOTO_FIELD_MAP = { photo_own_passport_url: 'own_passport', photo_father_passport_url: 'father_passport', photo_mother_passport_url: 'mother_passport', photo_spouse_passport_url: 'spouse_passport' };
 
 // ALL photo labels: programmatically click the hidden file input.
 // This is the most reliable cross-browser approach.
@@ -147,7 +151,6 @@ function handlePhotoFile(input, preview, fieldName) {
   const file = input.files[0];
   if (!file || !preview) return;
 
-  // Immediate visual feedback
   preview.innerHTML = '';
   const loading = document.createElement('span');
   loading.className = 'pdf-icon';
@@ -156,14 +159,13 @@ function handlePhotoFile(input, preview, fieldName) {
 
   const reader = new FileReader();
   reader.onload = ev => {
-    const url = ev.target.result;
-    if (fieldName) photoUrls[fieldName] = url;
+    const dataUrl = ev.target.result;
+    if (fieldName) photoUrls[fieldName] = dataUrl;
 
     preview.innerHTML = '';
-
     if (file.type.startsWith('image/') && !file.type.includes('heic') && !file.type.includes('heif')) {
       const img = document.createElement('img');
-      img.src = url;
+      img.src = dataUrl;
       img.alt = file.name;
       img.onerror = () => {
         preview.innerHTML = '';
@@ -175,11 +177,29 @@ function handlePhotoFile(input, preview, fieldName) {
       addFileIcon(preview, file.name);
     }
     addRemoveBtn(preview, input, fieldName);
+
+    // Upload to Supabase Storage so we get a persistent URL (survives reload)
+    if (sb && fieldName) uploadPhotoToStorage(file, fieldName, preview, input);
   };
   reader.onerror = () => {
     preview.innerHTML = '<span class="pdf-icon">❌ Ошибка чтения файла</span>';
   };
   reader.readAsDataURL(file);
+}
+
+async function uploadPhotoToStorage(file, fieldName, preview, input) {
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '');
+    const path = appId + '/' + fieldName + '_' + Date.now() + '.' + (ext || 'jpg');
+    const { error } = await sb.storage.from('passport-photos').upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data } = sb.storage.from('passport-photos').getPublicUrl(path);
+    photoUrls[fieldName] = data.publicUrl;
+    saveNow(); // persist the URL to localStorage
+  } catch (e) {
+    console.warn('Photo upload failed:', e);
+    // Keep data URL in memory so preview stays; just won't survive reload
+  }
 }
 
 function addFileIcon(preview, name) {
@@ -206,7 +226,8 @@ function showStoredPhoto(preview, url, fieldName) {
   if (!preview || !url) return;
   photoUrls[fieldName] = url;
   preview.innerHTML = '';
-  if (url.startsWith('data:image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) {
+  const isImage = url.startsWith('data:image') || /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url) || url.includes('supabase.co/storage');
+  if (isImage) {
     const img = document.createElement('img');
     img.src = url;
     img.alt = fieldName;
@@ -339,6 +360,12 @@ function collectFormData() {
     });
   }
 
+  // Photo URLs (from uploads — only http(s) URLs are persisted; data: stripped in saveNow)
+  PHOTO_KEYS.forEach(key => {
+    const field = PHOTO_FIELD_MAP[key];
+    d[key] = (field && photoUrls[field]) ? photoUrls[field] : '';
+  });
+
   return d;
 }
 
@@ -383,6 +410,20 @@ function populateForm(d) {
       const block = document.getElementById('childrenBlock');
       if (block) block.style.display = 'block';
     }
+
+    // Restore uploaded photos from saved URLs
+    const photoPreviews = [
+      ['photo_own_passport_url',    'preview_own_passport',    'own_passport'],
+      ['photo_father_passport_url', 'preview_father_passport', 'father_passport'],
+      ['photo_mother_passport_url', 'preview_mother_passport', 'mother_passport'],
+      ['photo_spouse_passport_url', 'preview_spouse_passport', 'spouse_passport'],
+    ];
+    photoPreviews.forEach(([key, previewId, field]) => {
+      const url = d[key];
+      if (!url) return;
+      const preview = document.getElementById(previewId);
+      if (preview) showStoredPhoto(preview, url, field);
+    });
   } finally {
     isPopulating = false;
   }
@@ -449,11 +490,19 @@ function hasContent(d) {
   );
 }
 
+function stripDataUrlsForStorage(d) {
+  const out = { ...d };
+  PHOTO_KEYS.forEach(k => {
+    if (out[k] && String(out[k]).startsWith('data:')) out[k] = '';
+  });
+  return out;
+}
+
 function saveNow() {
   if (isPopulating) return;  // never save while populating from storage
   try {
-    const d = collectFormData();
-    // Don't create a new empty localStorage entry (e.g. beforeunload on a blank page)
+    let d = collectFormData();
+    d = stripDataUrlsForStorage(d); // never persist base64 (quota + slow)
     const existing = localStorage.getItem('visa_draft_' + appId);
     if (!hasContent(d) && !existing) return;
     localStorage.setItem('visa_draft_' + appId, JSON.stringify(d));
