@@ -14,30 +14,20 @@
         <h1>UK Standard Visitor Visa</h1>
         <p class="subtitle">Форма заявления / Application Form</p>
       </div>
-      <div class="status-badge" id="statusBadge">Черновик / Draft</div>
+      <div class="header-right">
+        <div class="status-badge" id="statusBadge">Черновик / Draft</div>
+        <div class="header-actions">
+          <span id="saveStatus" class="save-status-inline">—</span>
+          <button type="button" class="btn btn-sm btn-outline-white" id="btnSaveDraft">💾 Сохранить</button>
+          <button type="button" class="btn btn-sm btn-yellow" id="btnSubmit">✅ Подать</button>
+        </div>
+      </div>
     </div>
     <div class="progress-wrap">
       <div class="progress-bar" id="progressBar"></div>
     </div>
     <div class="progress-label" id="progressLabel">0% заполнено / completed</div>
-  </header>
-
-  <div class="container">
-    <!-- Config warning -->
-    <div id="configWarning" class="alert alert-warning" style="display:none;">
-      ⚠️ <strong>Настройте Supabase:</strong> Откройте <code>app.js</code> и вставьте ваш
-      <code>SUPABASE_URL</code> и <code>SUPABASE_ANON_KEY</code>.
-      До этого данные не будут сохраняться в облаке.
-    </div>
-
-    <!-- Save bar -->
-    <div class="save-bar">
-      <span id="saveStatus" class="save-status">Не сохранено / Not saved</span>
-      <button type="button" class="btn btn-secondary" id="btnSaveDraft">💾 Сохранить черновик / Save Draft</button>
-      <button type="button" class="btn btn-primary" id="btnSubmit">✅ Подать заявку / Submit</button>
-    </div>
-
-    <!-- Quick jump nav -->
+    <!-- Sticky section nav inside header -->
     <nav class="section-tabs" role="navigation" aria-label="Разделы формы">
       <button type="button" class="tab-jump" data-target="sec0">1. Личные данные</button>
       <button type="button" class="tab-jump" data-target="sec1">2. Паспорт</button>
@@ -45,8 +35,16 @@
       <button type="button" class="tab-jump" data-target="sec3">4. Семья</button>
       <button type="button" class="tab-jump" data-target="sec4">5. Работа / Финансы</button>
       <button type="button" class="tab-jump" data-target="sec5">6. Поездка</button>
-      <button type="button" class="tab-jump" data-target="sec6">7. Связи в UK / История</button>
+      <button type="button" class="tab-jump" data-target="sec6">7. UK / История</button>
     </nav>
+  </header>
+
+  <div class="container">
+    <!-- Config warning -->
+    <div id="configWarning" class="alert alert-warning" style="display:none;">
+      ⚠️ <strong>Настройте Supabase:</strong> Откройте <code>app.js</code> и вставьте ключи.
+      До этого данные не будут сохраняться в облаке.
+    </div>
 
     <form id="visaForm" novalidate>
 

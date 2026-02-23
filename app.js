@@ -445,7 +445,7 @@ function setSaveStatus(msg, state) {
   const el = document.getElementById('saveStatus');
   if (!el) return;
   el.textContent = msg;
-  el.className = 'save-status ' + (state || '');
+  el.className = 'save-status-inline ' + (state || '');
 }
 
 function debouncedSave() {
@@ -585,6 +585,25 @@ document.getElementById('visaForm').addEventListener('change', () => { debounced
 document.getElementById('btnSaveDraft').addEventListener('click',    () => saveDraft(false));
 document.getElementById('btnSubmit').addEventListener('click',       submitApplication);
 document.getElementById('btnSubmitBottom').addEventListener('click', submitApplication);
+
+// ============================================================
+//  Active tab highlight on scroll (IntersectionObserver)
+// ============================================================
+const sectionEls = ['sec0','sec1','sec2','sec3','sec4','sec5','sec6']
+  .map(id => document.getElementById(id)).filter(Boolean);
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      document.querySelectorAll('.tab-jump').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.target === id);
+      });
+    }
+  });
+}, { threshold: 0.25 });
+
+sectionEls.forEach(el => observer.observe(el));
 
 // ============================================================
 //  Boot
