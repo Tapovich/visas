@@ -221,37 +221,60 @@ function handlePhotoPreview(input, preview, fieldName) {
   if (!file) return;
   preview.innerHTML = '';
 
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = e => {
+  // Show a loading placeholder immediately so user gets feedback
+  const loadingSpan = document.createElement('span');
+  loadingSpan.className = 'pdf-icon';
+  loadingSpan.textContent = '⏳ Загрузка... / Loading...';
+  preview.appendChild(loadingSpan);
+
+  // Try to show image preview; fallback to file icon for PDF/HEIC/unsupported
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.innerHTML = '';
+    const dataUrl = e.target.result;
+
+    // Store data URL and autosave
+    photoUrls[fieldName] = dataUrl;
+    debouncedSave();
+
+    // Try rendering as image; if it fails (e.g. HEIC), show file icon
+    if (file.type.startsWith('image/') && !file.type.includes('heic') && !file.type.includes('heif')) {
       const img = document.createElement('img');
-      img.src = e.target.result;
       img.alt = fieldName;
+      img.onerror = () => {
+        // Can't render — show file icon instead
+        preview.innerHTML = '';
+        const span = document.createElement('span');
+        span.className = 'pdf-icon';
+        span.textContent = '📄 ' + file.name;
+        preview.appendChild(span);
+        preview.appendChild(makeRemoveBtn(input, preview, fieldName));
+      };
+      img.src = dataUrl;
       preview.appendChild(img);
       preview.appendChild(makeRemoveBtn(input, preview, fieldName));
-    };
-    reader.readAsDataURL(file);
-  } else {
+    } else {
+      // PDF, HEIC, or other non-renderable format
+      const span = document.createElement('span');
+      span.className = 'pdf-icon';
+      span.textContent = '📄 ' + file.name;
+      preview.appendChild(span);
+      preview.appendChild(makeRemoveBtn(input, preview, fieldName));
+    }
+
+    // Also upload to Supabase Storage if available (replaces data URL with CDN URL)
+    if (supabase) {
+      uploadPhoto(file, fieldName);
+    }
+  };
+  reader.onerror = () => {
+    preview.innerHTML = '';
     const span = document.createElement('span');
     span.className = 'pdf-icon';
-    span.textContent = '📄 ' + file.name;
+    span.textContent = '❌ Ошибка чтения файла / File read error';
     preview.appendChild(span);
-    preview.appendChild(makeRemoveBtn(input, preview, fieldName));
-  }
-
-  // Always save a local data URL for the photo, then autosave draft
-  const localReader = new FileReader();
-  localReader.onload = e => {
-    photoUrls[fieldName] = e.target.result;
-    // Autosave draft so photo URL is persisted immediately
-    debouncedSave();
   };
-  localReader.readAsDataURL(file);
-
-  // Also upload to Supabase Storage if available (replaces data URL with CDN URL)
-  if (supabase) {
-    uploadPhoto(file, fieldName);
-  }
+  reader.readAsDataURL(file);
 }
 
 function makeRemoveBtn(input, preview, fieldName) {
