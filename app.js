@@ -301,11 +301,13 @@ function addChild(data) {
     });
   }
 
-  // Photo for this child
+  // Photo for this child (fieldName so it persists to Storage + draft)
   if (fileInput) {
     fileInput.addEventListener('change', function () {
       const prev = this.closest('.photo-upload-area').querySelector('.child-photo-preview');
-      handlePhotoFile(this, prev, null);
+      const entry = this.closest('.child-entry');
+      const fieldName = entry && entry.dataset.childIdx ? 'child_' + entry.dataset.childIdx + '_passport' : null;
+      handlePhotoFile(this, prev, fieldName);
     });
   }
   if (photoLabel) {
@@ -347,15 +349,18 @@ function collectFormData() {
     d[name] = checked ? checked.value : '';
   });
 
-  // Children
+  // Children (including photo URL per child)
   d.children = [];
   if (childrenList) {
     childrenList.querySelectorAll('.child-entry').forEach(el => {
+      const idx = el.dataset.childIdx || '';
+      const photoUrl = idx ? (photoUrls['child_' + idx + '_passport'] || '') : '';
       d.children.push({
         name:        el.querySelector('[name="child_name"]')?.value        || '',
         dob:         el.querySelector('[name="child_dob"]')?.value          || '',
         nationality: el.querySelector('[name="child_nationality"]')?.value  || '',
         location:    el.querySelector('[name="child_location"]')?.value     || '',
+        photo_url:   photoUrl,
       });
     });
   }
@@ -400,11 +405,18 @@ function populateForm(d) {
     if (empSel) empSel.dispatchEvent(new Event('change'));
     refreshSpouse();
 
-    // Children
+    // Children (with photo_url restore)
     if (Array.isArray(d.children) && d.children.length > 0) {
       if (childrenList) childrenList.innerHTML = '';
       childCount = 0;
-      d.children.forEach(c => addChild(c));
+      d.children.forEach(c => {
+        addChild(c);
+        if (c.photo_url) {
+          const lastEntry = childrenList.querySelector('.child-entry:last-child');
+          const preview = lastEntry && lastEntry.querySelector('.child-photo-preview');
+          if (preview) showStoredPhoto(preview, c.photo_url, 'child_' + childCount + '_passport');
+        }
+      });
       const yn = document.querySelector('input[name="children_yn"][value="Yes"]');
       if (yn) { yn.checked = true; }
       const block = document.getElementById('childrenBlock');
@@ -495,6 +507,12 @@ function stripDataUrlsForStorage(d) {
   PHOTO_KEYS.forEach(k => {
     if (out[k] && String(out[k]).startsWith('data:')) out[k] = '';
   });
+  if (Array.isArray(out.children)) {
+    out.children = out.children.map(c => ({
+      ...c,
+      photo_url: (c.photo_url && String(c.photo_url).startsWith('data:')) ? '' : (c.photo_url || ''),
+    }));
+  }
   return out;
 }
 
@@ -521,7 +539,7 @@ function scheduleCloudSync() {
   cloudTimer = setTimeout(async () => {
     if (!sb) return;
     try {
-      const d = collectFormData();
+      const d = stripDataUrlsForStorage(collectFormData());
       await sb.from('visa_applications').upsert({
         id: appId, data: d, updated_at: new Date().toISOString(),
       });
