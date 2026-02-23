@@ -90,14 +90,17 @@ header h1 {
 }
 
 .save-status-inline {
-  font-size: 0.72rem;
-  opacity: 0.8;
+  font-size: 0.82rem;
+  font-weight: 600;
   white-space: nowrap;
-  color: var(--white);
+  color: rgba(255,255,255,0.55);
+  transition: color 0.25s, opacity 0.25s;
+  min-width: 120px;
+  text-align: right;
 }
-.save-status-inline.saving { color: var(--yellow); opacity: 1; }
-.save-status-inline.saved  { color: #7dffb3; opacity: 1; }
-.save-status-inline.error  { color: #ff8080; opacity: 1; }
+.save-status-inline.saving { color: var(--yellow);  }
+.save-status-inline.saved  { color: #7dffb3; }
+.save-status-inline.error  { color: #ff8080; }
 
 /* Small header buttons */
 .btn-sm {

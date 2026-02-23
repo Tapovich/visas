@@ -567,8 +567,12 @@ function saveToLocalStorage(submitFlag) {
     }
     localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag || false }));
     console.log('💾 Saved to localStorage');
+    // Show instant feedback — user shouldn't have to wait for the cloud save
+    setSaveStatus('Сохранено ✓', 'saved');
+    updateProgress();
   } catch (e) {
     console.error('localStorage save failed:', e);
+    setSaveStatus('Ошибка сохранения / Save error', 'error');
   }
 }
 
