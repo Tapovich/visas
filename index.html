@@ -18,8 +18,7 @@
         <div class="status-badge" id="statusBadge">Черновик / Draft</div>
         <div class="header-actions">
           <span id="saveStatus" class="save-status-inline">—</span>
-          <button type="button" class="btn btn-sm btn-outline-white" id="btnSaveDraft">💾 Сохранить</button>
-          <button type="button" class="btn btn-sm btn-yellow" id="btnSubmit">✅ Подать</button>
+          <button type="button" class="btn btn-sm btn-yellow submit-ready" id="btnSubmit" style="display:none;">✅ Подать заявку</button>
         </div>
       </div>
     </div>
@@ -693,8 +692,9 @@
         </div>
       </section>
 
-      <!-- Final submit button -->
-      <div class="final-submit">
+      <!-- Final submit button — shown only when 100% filled -->
+      <div class="final-submit" id="finalSubmitWrap" style="display:none;">
+        <div class="submit-ready-msg">🎉 Все обязательные поля заполнены! / All required fields filled!</div>
         <button type="button" class="btn btn-primary btn-large" id="btnSubmitBottom">✅ Подать заявку / Submit Application</button>
       </div>
 

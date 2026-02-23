@@ -239,12 +239,16 @@ function handlePhotoPreview(input, preview, fieldName) {
     preview.appendChild(makeRemoveBtn(input, preview, fieldName));
   }
 
-  // Always save a local data URL for the photo
+  // Always save a local data URL for the photo, then autosave draft
   const localReader = new FileReader();
-  localReader.onload = e => { photoUrls[fieldName] = e.target.result; };
+  localReader.onload = e => {
+    photoUrls[fieldName] = e.target.result;
+    // Autosave draft so photo URL is persisted immediately
+    debouncedSave();
+  };
   localReader.readAsDataURL(file);
 
-  // Also upload to Supabase if available
+  // Also upload to Supabase Storage if available (replaces data URL with CDN URL)
   if (supabase) {
     uploadPhoto(file, fieldName);
   }
@@ -452,20 +456,12 @@ function updateProgress() {
     btn.classList.toggle('done', done);
   });
 
-  // Enable/disable submit buttons based on 100% completion
+  // Show/hide submit buttons only when 100% filled
   const allFilled = pct === 100;
-  const btnSubmit       = document.getElementById('btnSubmit');
-  const btnSubmitBottom = document.getElementById('btnSubmitBottom');
-  if (btnSubmit) {
-    btnSubmit.disabled = !allFilled;
-    btnSubmit.style.opacity = allFilled ? '1' : '0.5';
-    btnSubmit.style.cursor  = allFilled ? 'pointer' : 'not-allowed';
-  }
-  if (btnSubmitBottom) {
-    btnSubmitBottom.disabled = !allFilled;
-    btnSubmitBottom.style.opacity = allFilled ? '1' : '0.5';
-    btnSubmitBottom.style.cursor  = allFilled ? 'pointer' : 'not-allowed';
-  }
+  const btnSubmit        = document.getElementById('btnSubmit');
+  const finalSubmitWrap  = document.getElementById('finalSubmitWrap');
+  if (btnSubmit)       btnSubmit.style.display       = allFilled ? 'inline-flex' : 'none';
+  if (finalSubmitWrap) finalSubmitWrap.style.display  = allFilled ? 'block'      : 'none';
 }
 
 // ============================================================
@@ -616,7 +612,6 @@ async function submitApplication() {
 document.getElementById('visaForm').addEventListener('input',  () => { debouncedSave(); updateProgress(); });
 document.getElementById('visaForm').addEventListener('change', () => { debouncedSave(); updateProgress(); });
 
-document.getElementById('btnSaveDraft').addEventListener('click',    () => saveDraft(false));
 document.getElementById('btnSubmit').addEventListener('click',       submitApplication);
 document.getElementById('btnSubmitBottom').addEventListener('click', submitApplication);
 
