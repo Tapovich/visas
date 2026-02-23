@@ -434,6 +434,63 @@ header h1 {
   line-height: 1.4;
 }
 
+/* Travel history cards (country – month – year) */
+.travel-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.trip-card {
+  background: var(--grey);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.trip-card-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.trip-card .trip-country {
+  min-width: 160px;
+  flex: 1 1 160px;
+}
+
+.trip-card .trip-month {
+  min-width: 140px;
+  flex: 0 1 140px;
+}
+
+.trip-card .trip-year {
+  min-width: 100px;
+  flex: 0 1 100px;
+}
+
+.trip-card select {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  font-family: var(--font);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+
+.trip-card .trip-remove-btn {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .trip-card-inner { flex-direction: column; align-items: stretch; }
+  .trip-card .trip-country, .trip-card .trip-month, .trip-card .trip-year { min-width: 100%; }
+}
+
 /* ====== Photo upload ====== */
 .photo-upload-group { }
 

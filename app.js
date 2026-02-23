@@ -332,6 +332,67 @@ function renumberChildren() {
   childCount = childrenList.querySelectorAll('.child-entry').length;
 }
 
+// ── Travel history (country – month – year cards) ─────────────
+const TRAVEL_COUNTRIES = [
+  'Uzbekistan', 'Russia', 'Turkey', 'UAE', 'Kazakhstan', 'Tajikistan', 'Kyrgyzstan',
+  'Azerbaijan', 'Georgia', 'Armenia', 'Ukraine', 'Belarus', 'USA', 'UK',
+  'Germany', 'France', 'Italy', 'Spain', 'China', 'India', 'Thailand', 'Egypt',
+  'Saudi Arabia', 'Malaysia', 'Indonesia', 'South Korea', 'Japan', 'Iran', 'Pakistan', 'Other',
+];
+const travelHistoryList = document.getElementById('travelHistoryList');
+const tripTemplate = document.getElementById('tripTemplate');
+const addTripBtn = document.getElementById('addTripBtn');
+
+function getTripYearOptions() {
+  const current = new Date().getFullYear();
+  const years = [];
+  for (let y = current - 10; y <= current + 1; y++) years.push(y);
+  return years;
+}
+
+function addTrip(data) {
+  if (!tripTemplate || !travelHistoryList) return;
+  data = data || {};
+  const clone = tripTemplate.content.cloneNode(true);
+  const card = clone.querySelector('.trip-card');
+
+  const countrySel = clone.querySelector('.trip-country');
+  TRAVEL_COUNTRIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if (data.country === c) opt.selected = true;
+    countrySel.appendChild(opt);
+  });
+
+  const yearSel = clone.querySelector('.trip-year');
+  const years = getTripYearOptions();
+  yearSel.innerHTML = '<option value="">— Год / Year —</option>';
+  years.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = y;
+    if (data.year === String(y)) opt.selected = true;
+    yearSel.appendChild(opt);
+  });
+
+  if (data.month) {
+    const monthSel = clone.querySelector('.trip-month');
+    if (monthSel) monthSel.value = data.month;
+  }
+
+  const removeBtn = clone.querySelector('.trip-remove-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function () {
+      this.closest('.trip-card').remove();
+    });
+  }
+
+  travelHistoryList.appendChild(clone);
+}
+
+if (addTripBtn) addTripBtn.addEventListener('click', () => addTrip());
+
 // ── Collect form data ─────────────────────────────────────────
 function collectFormData() {
   const d = {};
@@ -370,6 +431,17 @@ function collectFormData() {
     const field = PHOTO_FIELD_MAP[key];
     d[key] = (field && photoUrls[field]) ? photoUrls[field] : '';
   });
+
+  // Travel history (cards: country, month, year)
+  d.travel_history = [];
+  if (travelHistoryList) {
+    travelHistoryList.querySelectorAll('.trip-card').forEach(card => {
+      const country = card.querySelector('.trip-country')?.value || '';
+      const month = card.querySelector('.trip-month')?.value || '';
+      const year = card.querySelector('.trip-year')?.value || '';
+      if (country || month || year) d.travel_history.push({ country, month, year });
+    });
+  }
 
   return d;
 }
@@ -421,6 +493,12 @@ function populateForm(d) {
       if (yn) { yn.checked = true; }
       const block = document.getElementById('childrenBlock');
       if (block) block.style.display = 'block';
+    }
+
+    // Restore travel history cards
+    if (Array.isArray(d.travel_history) && d.travel_history.length > 0 && travelHistoryList) {
+      travelHistoryList.innerHTML = '';
+      d.travel_history.forEach(t => addTrip(t));
     }
 
     // Restore uploaded photos from saved URLs

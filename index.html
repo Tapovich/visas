@@ -669,9 +669,10 @@
             </div>
 
             <div class="field-group">
-              <label for="countries_visited">Страны, которые вы посещали за последние 10 лет / Countries you have visited in the last 10 years <span class="optional">укажите страну и даты / country and dates</span></label>
-              <textarea id="countries_visited" name="countries_visited" rows="5"
-                placeholder="Например: Турция — июнь 2022; Россия — 2019–2021; ОАЭ — март 2023. / e.g. Turkey — June 2022; Russia — 2019–2021; UAE — March 2023."></textarea>
+              <label>Страны за последние 10 лет / Countries visited in last 10 years</label>
+              <p class="fieldset-hint">Добавьте поездку: страна, месяц и год. / Add each trip: country, month and year.</p>
+              <div id="travelHistoryList" class="travel-history-list"></div>
+              <button type="button" class="btn btn-secondary" id="addTripBtn">+ Добавить поездку / Add trip</button>
             </div>
 
             <div class="field-group">
@@ -740,6 +741,36 @@
           </label>
           <div class="photo-preview child-photo-preview"></div>
         </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Trip card template (country, month, year) -->
+  <template id="tripTemplate">
+    <div class="trip-card">
+      <div class="trip-card-inner">
+        <select class="trip-country" data-field="country" aria-label="Country">
+          <!-- options filled by JS -->
+        </select>
+        <select class="trip-month" data-field="month" aria-label="Month">
+          <option value="">— Месяц / Month —</option>
+          <option value="01">Январь / January</option>
+          <option value="02">Февраль / February</option>
+          <option value="03">Март / March</option>
+          <option value="04">Апрель / April</option>
+          <option value="05">Май / May</option>
+          <option value="06">Июнь / June</option>
+          <option value="07">Июль / July</option>
+          <option value="08">Август / August</option>
+          <option value="09">Сентябрь / September</option>
+          <option value="10">Октябрь / October</option>
+          <option value="11">Ноябрь / November</option>
+          <option value="12">Декабрь / December</option>
+        </select>
+        <select class="trip-year" data-field="year" aria-label="Year">
+          <!-- options filled by JS -->
+        </select>
+        <button type="button" class="btn btn-danger trip-remove-btn" aria-label="Remove">✕</button>
       </div>
     </div>
   </template>
