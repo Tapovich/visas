@@ -499,36 +499,56 @@ function setSaveStatus(msg, state) {
   el.className = 'save-status-inline ' + (state || '');
 }
 
+// Save to localStorage instantly (no debounce) so data never gets lost
+function saveToLocalStorage(submitFlag) {
+  try {
+    const formData = collectFormData();
+    localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag || false }));
+    console.log('💾 Saved to localStorage');
+  } catch (e) {
+    console.error('localStorage save failed:', e);
+  }
+}
+
 function debouncedSave() {
+  // Instantly save to localStorage so data persists even if page closes
+  saveToLocalStorage(false);
+  // Debounce only the Supabase cloud save
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveDraft(false), 600);
+  saveTimer = setTimeout(() => saveDraftToCloud(false), 1200);
 }
 
 async function saveDraft(submitFlag = false) {
-  const formData = collectFormData();
-  setSaveStatus('Сохранение... / Saving...', 'saving');
+  saveToLocalStorage(submitFlag);
+  await saveDraftToCloud(submitFlag);
+}
 
-  // Always save to localStorage
-  localStorage.setItem('visa_draft_' + appId, JSON.stringify({ formData, submitted: submitFlag }));
-
+async function saveDraftToCloud(submitFlag = false) {
   if (!supabase) {
-    setSaveStatus('Сохранено локально ✓', 'saved');
+    setSaveStatus('Сохранено ✓', 'saved');
     updateProgress();
     return;
   }
 
-  try {
-    const { data: existing } = await supabase
-      .from('visa_applications').select('id').eq('id', appId).maybeSingle();
+  const formData = collectFormData();
+  setSaveStatus('Сохранение... / Saving...', 'saving');
 
-    if (existing) {
-      await supabase.from('visa_applications').update({
-        data: formData, submitted: submitFlag, updated_at: new Date().toISOString(),
-      }).eq('id', appId);
+  try {
+    // Use upsert for simplicity — single call instead of select+insert/update
+    const { error } = await supabase.from('visa_applications').upsert({
+      id: appId,
+      data: formData,
+      submitted: submitFlag,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('Supabase upsert error:', error);
+      setSaveStatus('Ошибка облака / Cloud error', 'error');
     } else {
-      await supabase.from('visa_applications').insert({ id: appId, data: formData, submitted: submitFlag });
+      console.log('☁️ Saved to Supabase');
+      setSaveStatus('Сохранено ✓ / Saved', 'saved');
     }
-    setSaveStatus('Сохранено в облаке ✓ / Saved', 'saved');
     updateProgress();
   } catch (err) {
     console.error('Save error:', err);
@@ -536,30 +556,51 @@ async function saveDraft(submitFlag = false) {
   }
 }
 
+// Save on page close / navigation so nothing is lost
+window.addEventListener('beforeunload', () => {
+  saveToLocalStorage(false);
+});
+
 async function loadDraft() {
+  console.log('🔄 Loading draft for appId:', appId);
+
+  // 1. Try loading from Supabase
   if (supabase) {
     try {
       const { data, error } = await supabase
         .from('visa_applications').select('data, submitted').eq('id', appId).maybeSingle();
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase load error:', error);
+      } else if (data && data.data) {
+        console.log('☁️ Loaded from Supabase');
         populateForm(data.data);
         setSubmittedBadge(data.submitted);
         setSaveStatus('Данные загружены ✓', 'saved');
         updateProgress();
         return;
+      } else {
+        console.log('☁️ No data in Supabase for this ID');
       }
-    } catch (e) { /* fall through */ }
+    } catch (e) {
+      console.error('Supabase load exception:', e);
+    }
   }
 
+  // 2. Fall back to localStorage
   const raw = localStorage.getItem('visa_draft_' + appId);
   if (raw) {
     try {
       const saved = JSON.parse(raw);
-      populateForm(saved.formData);
-      setSubmittedBadge(saved.submitted);
-      setSaveStatus('Загружено локально ✓', 'saved');
-      updateProgress();
-    } catch (e) { console.error('Load error:', e); }
+      if (saved && saved.formData) {
+        console.log('💾 Loaded from localStorage');
+        populateForm(saved.formData);
+        setSubmittedBadge(saved.submitted);
+        setSaveStatus('Загружено ✓', 'saved');
+        updateProgress();
+      }
+    } catch (e) { console.error('localStorage load error:', e); }
+  } else {
+    console.log('💾 No data in localStorage');
   }
 }
 
@@ -631,9 +672,9 @@ async function submitApplication() {
 // ============================================================
 //  Event listeners
 // ============================================================
-// Autosave on every keystroke / change
-document.getElementById('visaForm').addEventListener('input',  () => { debouncedSave(); updateProgress(); });
-document.getElementById('visaForm').addEventListener('change', () => { debouncedSave(); updateProgress(); });
+// Autosave on every keystroke / change + update progress bar instantly
+document.getElementById('visaForm').addEventListener('input',  () => { updateProgress(); debouncedSave(); });
+document.getElementById('visaForm').addEventListener('change', () => { updateProgress(); debouncedSave(); });
 
 document.getElementById('btnSubmit').addEventListener('click',       submitApplication);
 document.getElementById('btnSubmitBottom').addEventListener('click', submitApplication);
